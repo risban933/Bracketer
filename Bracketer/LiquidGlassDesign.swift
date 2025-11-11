@@ -44,11 +44,11 @@ enum GlassIntensity {
     case regular
     case prominent
 
-    var material: Material {
+    var glassStyle: Glass {
         switch self {
-        case .subtle: return .ultraThin
-        case .regular: return .regular
-        case .prominent: return .thick
+        case .subtle: return .clear  // More transparent
+        case .regular: return .regular  // Standard glass effect
+        case .prominent: return .regular  // Most prominent available
         }
     }
 }
@@ -102,24 +102,22 @@ struct LiquidGlassModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         if let tint = tint {
-            // iOS 26.1+ tinted glass effect
+            // Tinted glass effect (uses .clear style which supports tinting)
             if interactive {
                 content
-                    .glassEffect(intensity.material.tint(tint))
-                    .interactive()
+                    .glassEffect(.clear.tint(tint).interactive())
             } else {
                 content
-                    .glassEffect(intensity.material.tint(tint))
+                    .glassEffect(.clear.tint(tint))
             }
         } else {
             // Standard glass effect
             if interactive {
                 content
-                    .glassEffect(intensity.material)
-                    .interactive()
+                    .glassEffect(intensity.glassStyle.interactive())
             } else {
                 content
-                    .glassEffect(intensity.material)
+                    .glassEffect(intensity.glassStyle)
             }
         }
     }
