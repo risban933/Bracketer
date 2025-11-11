@@ -375,7 +375,8 @@ struct ModernBracketingControls: View {
                         Text("\(count) shots")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundColor(bracketShotCount == count ? .black : .white)
-                            .frame(minWidth: 70, height: 36)
+                            .frame(minWidth: 70)
+                            .frame(height: 36)
                             .padding(.horizontal, 12)
                             .background(
                                 Capsule()

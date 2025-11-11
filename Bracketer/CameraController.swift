@@ -459,7 +459,9 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             photoSettings.maxPhotoDimensions = dims
         }
         photoSettings.flashMode = AVCaptureDevice.FlashMode.off
-        photoSettings.isAutoStillImageStabilizationEnabled = true
+        if #available(iOS 13.0, *) {
+            photoSettings.photoQualityPrioritization = .quality
+        }
 
         // Store expected shot count for progress tracking
         self.sequenceStep = 0
