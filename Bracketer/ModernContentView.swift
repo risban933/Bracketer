@@ -29,7 +29,13 @@ struct ModernContentView: View {
     // Shooting modes
     @State private var currentShootingMode: ShootingMode = .auto
     @State private var gridType: GridType = .ruleOfThirds
-    
+
+    // Camera controls (iOS 26+)
+    @State private var selectedZoom: CameraZoomLevel = .wide
+    @State private var flashMode: FlashMode = .off
+    @State private var timerMode: TimerMode = .off
+    @State private var livePhotoEnabled: Bool = false
+
     // Focus peaking colors
     private let focusPeakingColors: [Color] = [.red, .blue, .yellow, .green, .orange, .purple, .white]
     
@@ -64,36 +70,83 @@ struct ModernContentView: View {
                 )
                 
                 // Top status bar (Apple Camera style) - buttons rotate with device
-                ModernTopBar(
-                    camera: camera,
-                    currentShootingMode: currentShootingMode,
-                    selectedEVStep: selectedEVStep,
-                    isGridActive: showGrid,
-                    isLevelActive: showLevel,
-                    isHistogramActive: showHistogram,
-                    onModeChange: cycleShootingMode,
-                    onGridToggle: toggleGrid,
-                    onLevelToggle: toggleLevel,
-                    onHistogramToggle: toggleHistogram
-                )
-                .alwaysUpright(orientationManager)
+                if #available(iOS 26.0, *) {
+                    ModernTopBarEnhanced(
+                        camera: camera,
+                        currentShootingMode: currentShootingMode,
+                        selectedEVStep: selectedEVStep,
+                        flashMode: $flashMode,
+                        timerMode: $timerMode,
+                        livePhotoEnabled: $livePhotoEnabled,
+                        isGridActive: showGrid,
+                        isLevelActive: showLevel,
+                        isHistogramActive: showHistogram,
+                        onModeChange: cycleShootingMode,
+                        onGridToggle: toggleGrid,
+                        onLevelToggle: toggleLevel,
+                        onHistogramToggle: toggleHistogram
+                    )
+                    .alwaysUpright(orientationManager)
+                } else {
+                    ModernTopBar(
+                        camera: camera,
+                        currentShootingMode: currentShootingMode,
+                        selectedEVStep: selectedEVStep,
+                        isGridActive: showGrid,
+                        isLevelActive: showLevel,
+                        isHistogramActive: showHistogram,
+                        onModeChange: cycleShootingMode,
+                        onGridToggle: toggleGrid,
+                        onLevelToggle: toggleLevel,
+                        onHistogramToggle: toggleHistogram
+                    )
+                    .alwaysUpright(orientationManager)
+                }
+
+                // Zoom selector (Apple Camera style) - center of screen
+                if #available(iOS 26.0, *) {
+                    VStack {
+                        Spacer()
+                        CameraZoomControl(
+                            selectedZoom: $selectedZoom,
+                            availableZoomLevels: CameraZoomLevel.iPhone17ProMaxLevels
+                        )
+                        .padding(.bottom, 200)
+                    }
+                    .alwaysUpright(orientationManager)
+                }
 
                 // Bottom controls (Apple Camera style) - buttons rotate with device
                 VStack {
                     Spacer()
 
-                    ModernBottomControls(
-                        camera: camera,
-                        showProControls: $showProControls,
-                        showSettings: $showSettings,
-                        selectedEVStep: $selectedEVStep,
-                        currentEVCompensation: $currentEVCompensation,
-                        evCompensationLocked: $evCompensationLocked,
-                        focusPeakingEnabled: $focusPeakingEnabled,
-                        focusPeakingColor: $focusPeakingColor,
-                        focusPeakingIntensity: $focusPeakingIntensity,
-                        bracketShotCount: $bracketShotCount
-                    )
+                    if #available(iOS 26.0, *) {
+                        ModernBottomControlsEnhanced(
+                            camera: camera,
+                            showProControls: $showProControls,
+                            showSettings: $showSettings,
+                            selectedEVStep: $selectedEVStep,
+                            currentEVCompensation: $currentEVCompensation,
+                            evCompensationLocked: $evCompensationLocked,
+                            focusPeakingEnabled: $focusPeakingEnabled,
+                            focusPeakingColor: $focusPeakingColor,
+                            focusPeakingIntensity: $focusPeakingIntensity,
+                            bracketShotCount: $bracketShotCount
+                        )
+                    } else {
+                        ModernBottomControls(
+                            camera: camera,
+                            showProControls: $showProControls,
+                            showSettings: $showSettings,
+                            selectedEVStep: $selectedEVStep,
+                            currentEVCompensation: $currentEVCompensation,
+                            evCompensationLocked: $evCompensationLocked,
+                            focusPeakingEnabled: $focusPeakingEnabled,
+                            focusPeakingColor: $focusPeakingColor,
+                            focusPeakingIntensity: $focusPeakingIntensity,
+                            bracketShotCount: $bracketShotCount
+                        )
+                    }
                 }
                 .alwaysUpright(orientationManager)
                 
@@ -612,6 +665,122 @@ private enum ModernDeviceGate {
     }
 }
 
+// MARK: - Enhanced Top Bar with iOS 26 Components
+
+@available(iOS 26.0, *)
+struct ModernTopBarEnhanced: View {
+    let camera: CameraController
+    let currentShootingMode: ShootingMode
+    let selectedEVStep: Float
+    @Binding var flashMode: FlashMode
+    @Binding var timerMode: TimerMode
+    @Binding var livePhotoEnabled: Bool
+    let isGridActive: Bool
+    let isLevelActive: Bool
+    let isHistogramActive: Bool
+    let onModeChange: () -> Void
+    let onGridToggle: () -> Void
+    let onLevelToggle: () -> Void
+    let onHistogramToggle: () -> Void
+
+    var body: some View {
+        HStack {
+            // Left side - Flash, timer, and live photo
+            HStack(spacing: 12) {
+                FlashModeControl(flashMode: $flashMode)
+                TimerModeControl(timerMode: $timerMode)
+                LivePhotoToggle(isEnabled: $livePhotoEnabled)
+            }
+
+            Spacer()
+
+            // Center - Mode indicator and bracketing
+            HStack(spacing: 8) {
+                ModernShootingModeIndicator(mode: currentShootingMode, onTap: onModeChange)
+                ModernBracketingIndicator(evStep: selectedEVStep)
+            }
+
+            Spacer()
+
+            // Right side - Grid, level, histogram
+            HStack(spacing: 12) {
+                ModernToggleButton(
+                    icon: "square.grid.3x3",
+                    isActive: isGridActive,
+                    onTap: onGridToggle
+                )
+                ModernToggleButton(
+                    icon: "level",
+                    isActive: isLevelActive,
+                    onTap: onLevelToggle
+                )
+                ModernToggleButton(
+                    icon: "chart.bar",
+                    isActive: isHistogramActive,
+                    onTap: onHistogramToggle
+                )
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 20)
+    }
+}
+
+// MARK: - Enhanced Bottom Controls with iOS 26 Components
+
+@available(iOS 26.0, *)
+struct ModernBottomControlsEnhanced: View {
+    let camera: CameraController
+    @Binding var showProControls: Bool
+    @Binding var showSettings: Bool
+    @Binding var selectedEVStep: Float
+    @Binding var currentEVCompensation: Float
+    @Binding var evCompensationLocked: Bool
+    @Binding var focusPeakingEnabled: Bool
+    @Binding var focusPeakingColor: Color
+    @Binding var focusPeakingIntensity: Float
+    @Binding var bracketShotCount: Int
+
+    var body: some View {
+        VStack(spacing: 20) {
+            // EV Compensation and Pro Controls
+            HStack {
+                EVControlView(
+                    currentEV: $currentEVCompensation,
+                    isLocked: $evCompensationLocked,
+                    showFineControls: false,
+                    onValueChanged: nil
+                )
+
+                Spacer()
+
+                ModernProControlButton(showProControls: $showProControls)
+            }
+            .padding(.horizontal, 20)
+
+            // Main control row with enhanced shutter button
+            HStack(spacing: 40) {
+                // Photo library
+                ModernPhotoLibraryButton()
+
+                // Enhanced shutter button
+                EnhancedShutterButton(
+                    isCapturing: camera.isCapturing,
+                    progress: Double(camera.captureProgress) / Double(max(1, bracketShotCount))
+                ) {
+                    camera.captureLockdownBracket(evStep: selectedEVStep, shotCount: bracketShotCount)
+                }
+
+                // Settings
+                ModernSettingsButton(showSettings: $showSettings)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 20)
+        }
+    }
+}
+
 #Preview {
     ModernContentView()
+        .environmentObject(OrientationManager())
 }
