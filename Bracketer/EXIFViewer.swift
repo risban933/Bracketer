@@ -221,7 +221,7 @@ struct EXIFViewer: View {
                                         .foregroundColor(.yellow)
                                         .frame(width: 120, alignment: .leading)
 
-                                    Text("\(metadata[key] ?? "N/A")")
+                                    Text(verbatim: metadata[key] ?? "N/A")
                                         .font(.system(size: 12, design: .monospaced))
                                         .foregroundColor(.white.opacity(0.8))
                                         .lineLimit(nil)
@@ -273,7 +273,7 @@ struct EXIFViewer: View {
     }
 
     private func generateHistogramData() {
-        guard let image = image else { return }
+        guard image != nil else { return }
 
         // Generate histogram data from the image
         let red = (0..<256).map { _ in Float.random(in: 0...1) }

@@ -226,12 +226,8 @@ struct ImageViewer: View {
         asset.requestContentEditingInput(with: options) { input, info in
             guard let input = input else { return }
 
-            do {
-                let fullImage = CIImage(contentsOf: input.fullSizeImageURL!)
-                self.currentMetadata = fullImage?.properties
-            } catch {
-                print("Failed to load metadata: \(error)")
-            }
+            let fullImage = CIImage(contentsOf: input.fullSizeImageURL!)
+            self.currentMetadata = fullImage?.properties
         }
     }
 
@@ -267,9 +263,8 @@ struct ImageViewer: View {
     
     private func evLabelForCurrentIndex() -> String {
         guard currentIndex >= 0 && currentIndex < bracketAssets.count else { return "" }
-        let asset = bracketAssets[currentIndex]
         // Try to infer from filename pattern in localIdentifier or metadata loaded earlier
-        // Since Photos API doesn’t expose filename directly here, fall back to index mapping
+        // Since Photos API doesn't expose filename directly here, fall back to index mapping
         // Map index to planned order [0EV, +EV, -EV] for 3 shots or [0, +, -, +2, -2]
         switch bracketAssets.count {
         case 3:
