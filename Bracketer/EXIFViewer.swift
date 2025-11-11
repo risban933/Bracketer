@@ -23,245 +23,281 @@ struct EXIFViewer: View {
     }()
 
     var body: some View {
+        mainScrollView
+            .overlay(depthMapOverlay)
+            .onAppear {
+                generateHistogramData()
+            }
+    }
+    
+    private var mainScrollView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // Header
-                HStack {
-                    Text("Image Information")
-                        .font(.system(size: 24, weight: .bold))
-                        .foregroundColor(.white)
-                    Spacer()
-                    Button {
-                        showFullScreen = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white.opacity(0.7))
-                    }
-                }
-
-                // Mini histogram
-                if let histogramData = histogramData {
-                    MiniHistogramView(data: histogramData)
-                        .frame(height: 80)
-                        .cornerRadius(8)
-                }
-
-                // Camera Settings Grid
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Camera Settings")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        EXIFItemView(
-                            icon: "camera.aperture",
-                            title: "Aperture",
-                            value: formatAperture(metadata["FNumber"] as? Double)
-                        )
-
-                        EXIFItemView(
-                            icon: "timer",
-                            title: "Shutter Speed",
-                            value: formatShutterSpeed(metadata["ExposureTime"] as? Double)
-                        )
-
-                        EXIFItemView(
-                            icon: "lightbulb",
-                            title: "ISO",
-                            value: formatISO(metadata["ISOSpeedRatings"] as? [NSNumber])
-                        )
-
-                        EXIFItemView(
-                            icon: "ruler",
-                            title: "Focal Length",
-                            value: formatFocalLength(metadata["FocalLength"] as? Double)
-                        )
-
-                        EXIFItemView(
-                            icon: "camera.filters",
-                            title: "White Balance",
-                            value: formatWhiteBalance(metadata["WhiteBalance"] as? Int)
-                        )
-
-                        EXIFItemView(
-                            icon: "flashlight.off.fill",
-                            title: "Flash",
-                            value: formatFlash(metadata["Flash"] as? Int)
-                        )
-                    }
-                }
-                .padding(16)
-                .background(Color.black.opacity(0.3))
-                .cornerRadius(12)
-
-                // Technical Information
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("Technical Details")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(.white)
-
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        EXIFItemView(
-                            icon: "camera",
-                            title: "Camera",
-                            value: formatCameraInfo(metadata)
-                        )
-
-                        EXIFItemView(
-                            icon: "cpu",
-                            title: "Lens",
-                            value: formatLensInfo(metadata)
-                        )
-
-                        EXIFItemView(
-                            icon: "photo",
-                            title: "Resolution",
-                            value: formatResolution(metadata)
-                        )
-
-                        EXIFItemView(
-                            icon: "doc",
-                            title: "File Size",
-                            value: formatFileSize(asset)
-                        )
-
-                        EXIFItemView(
-                            icon: "calendar",
-                            title: "Date Taken",
-                            value: formatDate(asset.creationDate)
-                        )
-
-                        EXIFItemView(
-                            icon: "mappin",
-                            title: "GPS",
-                            value: asset.location != nil ? "Available" : "Not Available"
-                        )
-                    }
-                }
-                .padding(16)
-                .background(Color.black.opacity(0.3))
-                .cornerRadius(12)
-
-                // Map View (if location available)
-                if let location = asset.location {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Location")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-
-                        ZStack {
-                            Map(initialPosition: .region(region)) {
-                                Marker("Photo", coordinate: location.coordinate)
-                            }
-                            .frame(height: 150)
-                            .cornerRadius(12)
-                            .allowsHitTesting(false)
-                            .onAppear {
-                                region = MKCoordinateRegion(
-                                    center: location.coordinate,
-                                    span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-                                )
-                            }
-                        }
-
-                        Text(formatLocationDetails(location))
-                            .font(.system(size: 14))
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                    .padding(16)
-                    .background(Color.black.opacity(0.3))
-                    .cornerRadius(12)
-                }
-
-                // Depth Map Analysis (for Portrait mode)
-                if isPortraitMode {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Depth Analysis")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(.white)
-
-                        Button {
-                            showDepthMapViewer = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "view.3d")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.blue)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("View Depth Map")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.white)
-                                    Text("3D focal plane analysis")
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.white.opacity(0.7))
-                                }
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.white.opacity(0.6))
-                            }
-                            .padding(16)
-                            .background(Color.blue.opacity(0.2))
-                            .cornerRadius(12)
-                        }
-                    }
-                    .padding(16)
-                    .background(Color.black.opacity(0.3))
-                    .cornerRadius(12)
-                }
-
-                // Raw EXIF Data (Collapsible)
-                DisclosureGroup {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(Array(metadata.keys.sorted()), id: \.self) { key in
-                                HStack(alignment: .top) {
-                                    Text(key)
-                                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                                        .foregroundColor(.yellow)
-                                        .frame(width: 120, alignment: .leading)
-
-                                    Text(verbatim: metadata[key] ?? "N/A")
-                                        .font(.system(size: 12, design: .monospaced))
-                                        .foregroundColor(.white.opacity(0.8))
-                                        .lineLimit(nil)
-                                }
-                                Divider()
-                                    .background(Color.white.opacity(0.2))
-                            }
-                        }
-                        .padding(.vertical, 8)
-                    }
-                } label: {
-                    Text("Raw EXIF Data")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-                .padding(16)
-                .background(Color.black.opacity(0.3))
-                .cornerRadius(12)
+                headerSection
+                histogramSection
+                cameraSettingsSection
+                technicalDetailsSection
+                locationSection
+                depthAnalysisSection
+                rawExifSection
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 20)
         }
         .background(Color.black.ignoresSafeArea())
-        .overlay(
-            // Depth Map Viewer Overlay
-            ZStack {
-                if showDepthMapViewer {
-                    Color.black.opacity(0.8)
-                        .ignoresSafeArea()
-                        .onTapGesture {
-                            showDepthMapViewer = false
-                        }
+    }
+    
+    private var headerSection: some View {
+        HStack {
+            Text("Image Information")
+                .font(.system(size: 24, weight: .bold))
+                .foregroundColor(.white)
+            Spacer()
+            Button {
+                showFullScreen = false
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
+    }
+    
+    @ViewBuilder
+    private var histogramSection: some View {
+        if let histogramData = histogramData {
+            MiniHistogramView(data: histogramData)
+                .frame(height: 80)
+                .cornerRadius(8)
+        }
+    }
+    
+    private var cameraSettingsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Camera Settings")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.white)
 
-                    DepthMapViewer(image: image, depthData: nil)
-                        .transition(.scale(scale: 0.9).combined(with: .opacity))
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                EXIFItemView(
+                    icon: "camera.aperture",
+                    title: "Aperture",
+                    value: formatAperture(metadata["FNumber"] as? Double)
+                )
+
+                EXIFItemView(
+                    icon: "timer",
+                    title: "Shutter Speed",
+                    value: formatShutterSpeed(metadata["ExposureTime"] as? Double)
+                )
+
+                EXIFItemView(
+                    icon: "lightbulb",
+                    title: "ISO",
+                    value: formatISO(metadata["ISOSpeedRatings"] as? [NSNumber])
+                )
+
+                EXIFItemView(
+                    icon: "ruler",
+                    title: "Focal Length",
+                    value: formatFocalLength(metadata["FocalLength"] as? Double)
+                )
+
+                EXIFItemView(
+                    icon: "camera.filters",
+                    title: "White Balance",
+                    value: formatWhiteBalance(metadata["WhiteBalance"] as? Int)
+                )
+
+                EXIFItemView(
+                    icon: "flashlight.off.fill",
+                    title: "Flash",
+                    value: formatFlash(metadata["Flash"] as? Int)
+                )
+            }
+        }
+        .padding(16)
+        .background(Color.black.opacity(0.3))
+        .cornerRadius(12)
+    }
+    
+    private var technicalDetailsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Technical Details")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.white)
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                EXIFItemView(
+                    icon: "camera",
+                    title: "Camera",
+                    value: formatCameraInfo(metadata)
+                )
+
+                EXIFItemView(
+                    icon: "cpu",
+                    title: "Lens",
+                    value: formatLensInfo(metadata)
+                )
+
+                EXIFItemView(
+                    icon: "photo",
+                    title: "Resolution",
+                    value: formatResolution(metadata)
+                )
+
+                EXIFItemView(
+                    icon: "doc",
+                    title: "File Size",
+                    value: formatFileSize(asset)
+                )
+
+                EXIFItemView(
+                    icon: "calendar",
+                    title: "Date Taken",
+                    value: formatDate(asset.creationDate)
+                )
+
+                EXIFItemView(
+                    icon: "mappin",
+                    title: "GPS",
+                    value: asset.location != nil ? "Available" : "Not Available"
+                )
+            }
+        }
+        .padding(16)
+        .background(Color.black.opacity(0.3))
+        .cornerRadius(12)
+    }
+    
+    @ViewBuilder
+    private var locationSection: some View {
+        if let location = asset.location {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Location")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+
+                locationMapView(for: location)
+
+                Text(formatLocationDetails(location))
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.8))
+            }
+            .padding(16)
+            .background(Color.black.opacity(0.3))
+            .cornerRadius(12)
+        }
+    }
+    
+    private func locationMapView(for location: CLLocation) -> some View {
+        Map(initialPosition: .region(region)) {
+            Marker("Photo", coordinate: location.coordinate)
+        }
+        .frame(height: 150)
+        .cornerRadius(12)
+        .allowsHitTesting(false)
+        .onAppear {
+            region = MKCoordinateRegion(
+                center: location.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+        }
+    }
+    
+    @ViewBuilder
+    private var depthAnalysisSection: some View {
+        if isPortraitMode {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Depth Analysis")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+
+                depthAnalysisButton
+            }
+            .padding(16)
+            .background(Color.black.opacity(0.3))
+            .cornerRadius(12)
+        }
+    }
+    
+    private var depthAnalysisButton: some View {
+        Button {
+            showDepthMapViewer = true
+        } label: {
+            HStack {
+                Image(systemName: "view.3d")
+                    .font(.system(size: 20))
+                    .foregroundColor(.blue)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("View Depth Map")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                    Text("3D focal plane analysis")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.white.opacity(0.6))
+            }
+            .padding(16)
+            .background(Color.blue.opacity(0.2))
+            .cornerRadius(12)
+        }
+    }
+    
+    private var rawExifSection: some View {
+        DisclosureGroup {
+            rawExifContent
+        } label: {
+            Text("Raw EXIF Data")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(.white)
+        }
+        .padding(16)
+        .background(Color.black.opacity(0.3))
+        .cornerRadius(12)
+    }
+    
+    private var rawExifContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach(Array(metadata.keys.sorted()), id: \.self) { key in
+                    exifDataRow(key: key)
+                    Divider()
+                        .background(Color.white.opacity(0.2))
                 }
             }
-        )
-        .onAppear {
-            generateHistogramData()
+            .padding(.vertical, 8)
+        }
+    }
+    
+    private func exifDataRow(key: String) -> some View {
+        HStack(alignment: .top) {
+            Text(key)
+                .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                .foregroundColor(.yellow)
+                .frame(width: 120, alignment: .leading)
+
+            Text(String(describing: metadata[key] ?? "N/A"))
+                .font(.system(size: 12, design: .monospaced))
+                .foregroundColor(.white.opacity(0.8))
+                .lineLimit(nil)
+        }
+    }
+    
+    @ViewBuilder
+    private var depthMapOverlay: some View {
+        if showDepthMapViewer {
+            Color.black.opacity(0.8)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    showDepthMapViewer = false
+                }
+            
+            DepthMapViewer(image: image, depthData: nil)
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
         }
     }
 
