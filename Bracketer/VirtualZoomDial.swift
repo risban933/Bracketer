@@ -33,7 +33,7 @@ struct VirtualZoomDial: View {
         ZStack {
             // Outer dial ring
             Circle()
-                .stroke(DesignSystem.Colors.tertiary, lineWidth: 2)
+                .stroke(ModernDesignSystem.Colors.cameraControlSecondary, lineWidth: 2)
                 .frame(width: dialRadius * 2, height: dialRadius * 2)
 
             // Zoom level markers
@@ -43,39 +43,39 @@ struct VirtualZoomDial: View {
 
                 // Marker line
                 Rectangle()
-                    .fill(isSelected ? DesignSystem.Colors.accent : DesignSystem.Colors.secondary)
+                    .fill(isSelected ? ModernDesignSystem.Colors.cameraControlActive : ModernDesignSystem.Colors.cameraControlSecondary)
                     .frame(width: isSelected ? 3 : 2, height: isSelected ? 25 : 20)
                     .offset(y: -dialRadius + 15)
                     .rotationEffect(angle)
 
                 // Zoom level label
                 Text(zoomLevels[index].label)
-                    .font(DesignSystem.Typography.caption)
-                    .foregroundColor(isSelected ? DesignSystem.Colors.accent : DesignSystem.Colors.secondary)
+                    .font(ModernDesignSystem.Typography.caption)
+                    .foregroundColor(isSelected ? ModernDesignSystem.Colors.cameraControlActive : ModernDesignSystem.Colors.cameraControlSecondary)
                     .offset(y: -dialRadius + 35)
                     .rotationEffect(angle)
             }
 
             // Center indicator
             Circle()
-                .fill(DesignSystem.Colors.surfaceTertiary)
+                .fill(ModernDesignSystem.Colors.glassBackground)
                 .frame(width: 40, height: 40)
                 .overlay(
                     Circle()
-                        .stroke(DesignSystem.Colors.tertiary, lineWidth: 1)
+                        .stroke(ModernDesignSystem.Colors.cameraControlSecondary, lineWidth: 1)
                 )
 
             // Current zoom display
             Text(currentZoomLevel.label)
-                .font(DesignSystem.Typography.monospaceLarge)
-                .foregroundColor(DesignSystem.Colors.primary)
+                .font(ModernDesignSystem.Typography.monospace)
+                .foregroundColor(ModernDesignSystem.Colors.cameraControl)
                 .frame(width: 40, height: 40)
-                .background(DesignSystem.Colors.surface.opacity(0.8))
+                .background(ModernDesignSystem.Colors.cameraBackground.opacity(0.8))
                 .clipShape(Circle())
 
             // Rotation indicator (small triangle pointing to current zoom)
             Triangle()
-                .fill(DesignSystem.Colors.accent)
+                .fill(ModernDesignSystem.Colors.cameraControlActive)
                 .frame(width: indicatorSize, height: indicatorSize)
                 .offset(y: -dialRadius + 10)
                 .rotationEffect(Angle(degrees: Double(currentZoomIndex) * (360.0 / Double(zoomLevels.count))))

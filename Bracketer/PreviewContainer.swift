@@ -9,7 +9,40 @@ private enum Constants {
     static let levelIndicatorWidthMultiplier: CGFloat = 0.6
 }
 
-// GridType is defined in ContentView.swift
+// Grid type enumeration for different overlay patterns
+enum GridType: String, CaseIterable, Identifiable {
+    case ruleOfThirds = "Rule of Thirds"
+    case goldenRatio = "Golden Ratio"
+    case goldenSpiral = "Golden Spiral"
+    case centerCrosshair = "Center Crosshair"
+
+    var id: String { rawValue }
+}
+
+enum ShootingMode: String, CaseIterable {
+    case auto = "AUTO"
+    case manual = "MANUAL"
+    case portrait = "PORTRAIT"
+    case night = "NIGHT"
+
+    var icon: String {
+        switch self {
+        case .auto: return "camera.fill"
+        case .manual: return "dial.medium.fill"
+        case .portrait: return "person.fill"
+        case .night: return "moon.stars.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .auto: return .white
+        case .manual: return .purple
+        case .portrait: return .blue
+        case .night: return .indigo
+        }
+    }
+}
 
 struct PreviewContainer: View {
     let session: AVCaptureSession
@@ -29,9 +62,10 @@ struct PreviewContainer: View {
                 // Background to fill the screen behind the 4:3 preview
                 Color.black.ignoresSafeArea()
 
-                // Centered 4:3 preview with overlays clipped to the same area
+                // Centered camera preview with overlays
                 ZStack {
                     CameraPreviewLayerView(session: session, onLayerReady: onLayerReady)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipped()
 
                     if showGrid {
@@ -69,9 +103,7 @@ struct PreviewContainer: View {
                             .allowsHitTesting(false)
                     }
                 }
-                .aspectRatio(4.0/3.0, contentMode: .fit)
-                // The frame expands to available space but maintains 4:3 aspect
-                .frame(maxWidth: geo.size.width, maxHeight: geo.size.height, alignment: .center)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
     }
@@ -215,18 +247,55 @@ struct CameraPreviewLayerView: UIViewRepresentable {
         let v = PreviewView()
         v.videoPreviewLayer.session = session
         v.videoPreviewLayer.videoGravity = .resizeAspectFill
-        
+
+        // Set up orientation handling
+        updateOrientation(for: v.videoPreviewLayer)
+
+        // Start observing orientation changes
+        NotificationCenter.default.addObserver(
+            forName: UIDevice.orientationDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { _ in
+            updateOrientation(for: v.videoPreviewLayer)
+        }
+
         if let c = v.videoPreviewLayer.connection, c.isVideoMirroringSupported {
             c.automaticallyAdjustsVideoMirroring = false
             c.isVideoMirrored = false
         }
-        
+
         onLayerReady?(v.videoPreviewLayer)
         return v
     }
 
     func updateUIView(_ uiView: PreviewView, context: Context) {
         uiView.videoPreviewLayer.videoGravity = .resizeAspectFill
+        updateOrientation(for: uiView.videoPreviewLayer)
+    }
+
+    private func updateOrientation(for previewLayer: AVCaptureVideoPreviewLayer) {
+        guard let connection = previewLayer.connection else { return }
+
+        let deviceOrientation = UIDevice.current.orientation
+        let rotationAngle: CGFloat
+
+        // Convert device orientation to rotation angle (in degrees)
+        switch deviceOrientation {
+        case .portrait:
+            rotationAngle = 0
+        case .portraitUpsideDown:
+            rotationAngle = 180
+        case .landscapeLeft:
+            rotationAngle = 90
+        case .landscapeRight:
+            rotationAngle = 270
+        default:
+            rotationAngle = 0  // Default to portrait
+        }
+
+        // iOS 17+ uses videoRotationAngle instead of deprecated videoOrientation
+        connection.videoRotationAngle = rotationAngle
     }
 }
 

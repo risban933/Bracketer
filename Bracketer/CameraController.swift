@@ -197,27 +197,25 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         let desire48 = CMVideoDimensions(width: 8064, height: 6048)
         let desire12 = CMVideoDimensions(width: 4032, height: 3024)
 
-        if #available(iOS 16.0, *) {
-            if let dev = self.device {
-                let supported = dev.activeFormat.supportedMaxPhotoDimensions
-                let targetDims: CMVideoDimensions
-                switch self.selectedCamera {
-                case .twoX, .eightX:
-                    targetDims = (self.teleUses12MP ? desire12 : desire48)
-                default:
-                    targetDims = desire48
-                }
+        // iOS 26+ only - maxPhotoDimensions always available
+        if let dev = self.device {
+            let supported = dev.activeFormat.supportedMaxPhotoDimensions
+            let targetDims: CMVideoDimensions
+            switch self.selectedCamera {
+            case .twoX, .eightX:
+                targetDims = (self.teleUses12MP ? desire12 : desire48)
+            default:
+                targetDims = desire48
+            }
 
                 if supported.contains(where: { $0.width == targetDims.width && $0.height == targetDims.height }) {
                     self.photoOutput.maxPhotoDimensions = targetDims
                     self.maxPhotoDims = targetDims
-                } else if let best = supported.max(by: { ($0.width * $0.height) < ($1.width * $1.height) }) {
-                    self.photoOutput.maxPhotoDimensions = best
-                    self.maxPhotoDims = best
-                }
+            } else if let best = supported.max(by: { ($0.width * $0.height) < ($1.width * $1.height) }) {
+                self.photoOutput.maxPhotoDimensions = best
+                self.maxPhotoDims = best
             }
         }
-        self.photoOutput.maxPhotoQualityPrioritization = .quality
     }
 
     func switchCamera(to kind: CameraKind) {
@@ -268,42 +266,41 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
 
     private func selectBestPhotoFormat() {
         guard let dev = self.device else { return }
-        if #available(iOS 16.0, *) {
-            do {
-                try dev.lockForConfiguration()
-                defer { dev.unlockForConfiguration() }
+        // iOS 26+ only - format selection always available
+        do {
+            try dev.lockForConfiguration()
+            defer { dev.unlockForConfiguration() }
 
-                let desire48 = (width: Int32(8064), height: Int32(6048))
-                let desire12 = (width: Int32(4032), height: Int32(3024))
-                let target = ((self.selectedCamera == .twoX || self.selectedCamera == .eightX) && self.teleUses12MP) ? desire12 : desire48
+            let desire48 = (width: Int32(8064), height: Int32(6048))
+            let desire12 = (width: Int32(4032), height: Int32(3024))
+            let target = ((self.selectedCamera == .twoX || self.selectedCamera == .eightX) && self.teleUses12MP) ? desire12 : desire48
 
-                // Prefer formats that support the target size and RAW if available
-                let preferredFormats = dev.formats.sorted { a, b in
-                    let aDims = a.supportedMaxPhotoDimensions
-                    let bDims = b.supportedMaxPhotoDimensions
-                    let aHasTarget = aDims.contains { $0.width == target.width && $0.height == target.height }
-                    let bHasTarget = bDims.contains { $0.width == target.width && $0.height == target.height }
-                    if aHasTarget != bHasTarget { return aHasTarget && !bHasTarget }
-                    // Fall back to larger total pixel count
-                    let aMax = aDims.max(by: { ($0.width * $0.height) < ($1.width * $1.height) })
-                    let bMax = bDims.max(by: { ($0.width * $0.height) < ($1.width * $1.height) })
-                    let aPixels = Int64((aMax?.width ?? 0) * (aMax?.height ?? 0))
-                    let bPixels = Int64((bMax?.width ?? 0) * (bMax?.height ?? 0))
-                    return aPixels > bPixels
-                }
-
-                for fmt in preferredFormats {
-                    dev.activeFormat = fmt
-                    // If ProRAW is desired, ensure RAW is available
-                    if self.photoOutput.availableRawPhotoPixelFormatTypes.isEmpty {
-                        continue
-                    }
-                    // If we reached here, we found a suitable format
-                    break
-                }
-            } catch {
-                self.postError("Format selection failed: \(error.localizedDescription)")
+            // Prefer formats that support the target size and RAW if available
+            let preferredFormats = dev.formats.sorted { a, b in
+                let aDims = a.supportedMaxPhotoDimensions
+                let bDims = b.supportedMaxPhotoDimensions
+                let aHasTarget = aDims.contains { $0.width == target.width && $0.height == target.height }
+                let bHasTarget = bDims.contains { $0.width == target.width && $0.height == target.height }
+                if aHasTarget != bHasTarget { return aHasTarget && !bHasTarget }
+                // Fall back to larger total pixel count
+                let aMax = aDims.max(by: { ($0.width * $0.height) < ($1.width * $1.height) })
+                let bMax = bDims.max(by: { ($0.width * $0.height) < ($1.width * $1.height) })
+                let aPixels = Int64((aMax?.width ?? 0) * (aMax?.height ?? 0))
+                let bPixels = Int64((bMax?.width ?? 0) * (bMax?.height ?? 0))
+                return aPixels > bPixels
             }
+
+            for fmt in preferredFormats {
+                dev.activeFormat = fmt
+                // If ProRAW is desired, ensure RAW is available
+                if self.photoOutput.availableRawPhotoPixelFormatTypes.isEmpty {
+                    continue
+                }
+                // If we reached here, we found a suitable format
+                break
+            }
+        } catch {
+            self.postError("Format selection failed: \(error.localizedDescription)")
         }
     }
 
@@ -455,13 +452,12 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             bracketedSettings: bracketSettings
         )
 
-        if #available(iOS 16.0, *), let dims = self.maxPhotoDims {
+        // iOS 26+ only - maxPhotoDimensions and photoQualityPrioritization always available
+        if let dims = self.maxPhotoDims {
             photoSettings.maxPhotoDimensions = dims
         }
         photoSettings.flashMode = AVCaptureDevice.FlashMode.off
-        if #available(iOS 13.0, *) {
-            photoSettings.photoQualityPrioritization = .quality
-        }
+        photoSettings.photoQualityPrioritization = .quality
 
         // Store expected shot count for progress tracking
         self.sequenceStep = 0

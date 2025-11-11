@@ -8,9 +8,8 @@ struct BracketerApp: App {
     @StateObject private var orientationManager = OrientationManager()
 
     init() {
-        // Lock app to portrait orientation (like Apple Camera app)
-        // UI elements will rotate, but the app stays portrait
-        AppDelegate.orientationLock = .portrait
+        // Support all orientations - camera preview will auto-rotate
+        AppDelegate.orientationLock = .all
     }
 
     var body: some Scene {
@@ -18,17 +17,17 @@ struct BracketerApp: App {
             ModernContentView()
                 .environmentObject(orientationManager)
                 .onAppear {
-                    // Ensure orientation lock is applied
-                    AppDelegate.orientationLock = .portrait
+                    // Support all orientations for camera
+                    AppDelegate.orientationLock = .all
                 }
         }
     }
 }
 
-// MARK: - App Delegate for Orientation Locking
+// MARK: - App Delegate for Orientation Support
 
 class AppDelegate: NSObject, UIApplicationDelegate {
-    static var orientationLock = UIInterfaceOrientationMask.portrait
+    static var orientationLock = UIInterfaceOrientationMask.all
 
     func application(
         _ application: UIApplication,

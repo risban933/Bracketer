@@ -10,7 +10,6 @@ struct ModernSettingsPanel: View {
     @Binding var showGrid: Bool
     @Binding var gridType: GridType
     @Binding var showLevel: Bool
-    @Binding var showHistogram: Bool
     @Binding var focusPeakingEnabled: Bool
     @Binding var focusPeakingColor: Color
     @Binding var focusPeakingIntensity: Float
@@ -19,15 +18,22 @@ struct ModernSettingsPanel: View {
     
     var body: some View {
         ZStack {
-            // Background overlay
-            ModernDesignSystem.Colors.cameraOverlay
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(ModernDesignSystem.Animations.spring) {
-                        showSettings = false
-                    }
+            // Enhanced background overlay with glass effect
+            ZStack {
+                Color.black.opacity(0.7)
+                    .ignoresSafeArea()
+
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.3)
+                    .ignoresSafeArea()
+            }
+            .onTapGesture {
+                withAnimation(ModernDesignSystem.Animations.spring) {
+                    showSettings = false
                 }
-            
+            }
+
             // Settings panel
             VStack(spacing: ModernDesignSystem.Spacing.xl) {
                 // Header
@@ -57,8 +63,7 @@ struct ModernSettingsPanel: View {
                         ModernViewfinderSettings(
                             showGrid: $showGrid,
                             gridType: $gridType,
-                            showLevel: $showLevel,
-                            showHistogram: $showHistogram
+                            showLevel: $showLevel
                         )
                         
                         // Focus settings
@@ -82,8 +87,17 @@ struct ModernSettingsPanel: View {
                 }
             }
             .padding(.vertical, ModernDesignSystem.Spacing.xl)
-            .frame(maxWidth: 400)
-            .modernCardStyle(.overlay)
+            .frame(maxWidth: 420)
+            .background(
+                RoundedRectangle(cornerRadius: ModernDesignSystem.CornerRadius.large)
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.95)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: ModernDesignSystem.CornerRadius.large)
+                            .stroke(.white.opacity(0.15), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.5), radius: 40, x: 0, y: 20)
+            )
             .padding(.horizontal, ModernDesignSystem.Spacing.lg)
         }
     }
@@ -94,7 +108,6 @@ struct ModernViewfinderSettings: View {
     @Binding var showGrid: Bool
     @Binding var gridType: GridType
     @Binding var showLevel: Bool
-    @Binding var showHistogram: Bool
     
     var body: some View {
         VStack(spacing: ModernDesignSystem.Spacing.lg) {
@@ -108,47 +121,17 @@ struct ModernViewfinderSettings: View {
                 Spacer()
             }
             
-            // Grid settings
-            VStack(spacing: ModernDesignSystem.Spacing.md) {
-                HStack {
-                    Image(systemName: "square.grid.3x3")
-                        .foregroundColor(ModernDesignSystem.Colors.professional)
-                    Text("Grid Overlay")
-                        .font(ModernDesignSystem.Typography.body)
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                    Spacer()
-                    Toggle("", isOn: $showGrid)
-                        .labelsHidden()
-                        .tint(ModernDesignSystem.Colors.professional)
-                }
-                
-                if showGrid {
-                    // Grid type selection
-                    VStack(alignment: .leading, spacing: ModernDesignSystem.Spacing.sm) {
-                        Text("Grid Type")
-                            .font(ModernDesignSystem.Typography.caption)
-                            .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
-                        
-                        HStack(spacing: ModernDesignSystem.Spacing.sm) {
-                            ForEach([GridType.ruleOfThirds, .goldenRatio, .goldenSpiral, .centerCrosshair], id: \.self) { type in
-                                Button {
-                                    gridType = type
-                                } label: {
-                                    Text(gridTypeLabel(type))
-                                        .font(ModernDesignSystem.Typography.caption)
-                                        .foregroundColor(gridType == type ? ModernDesignSystem.Colors.cameraBackground : ModernDesignSystem.Colors.cameraControl)
-                                        .padding(.horizontal, ModernDesignSystem.Spacing.sm)
-                                        .padding(.vertical, ModernDesignSystem.Spacing.xs)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 6)
-                                                .fill(gridType == type ? ModernDesignSystem.Colors.professional : ModernDesignSystem.Colors.glassBackground)
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
+            // Grid settings (3x3 only)
+            HStack {
+                Image(systemName: "square.grid.3x3")
+                    .foregroundColor(ModernDesignSystem.Colors.professional)
+                Text("Grid Overlay (3×3)")
+                    .font(ModernDesignSystem.Typography.body)
+                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                Spacer()
+                Toggle("", isOn: $showGrid)
+                    .labelsHidden()
+                    .tint(ModernDesignSystem.Colors.professional)
             }
             
             // Level indicator
@@ -162,19 +145,6 @@ struct ModernViewfinderSettings: View {
                 Toggle("", isOn: $showLevel)
                     .labelsHidden()
                     .tint(ModernDesignSystem.Colors.warning)
-            }
-            
-            // Histogram
-            HStack {
-                Image(systemName: "chart.bar")
-                    .foregroundColor(ModernDesignSystem.Colors.success)
-                Text("Histogram")
-                    .font(ModernDesignSystem.Typography.body)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                Spacer()
-                Toggle("", isOn: $showHistogram)
-                    .labelsHidden()
-                    .tint(ModernDesignSystem.Colors.success)
             }
         }
         .modernCardStyle(.glass)
@@ -373,13 +343,6 @@ struct ModernAboutSection: View {
                     icon: "app.badge",
                     title: "Version",
                     value: "1.0.0",
-                    action: {}
-                )
-                
-                ModernSettingRow(
-                    icon: "heart.fill",
-                    title: "Made with",
-                    value: "SwiftUI",
                     action: {}
                 )
             }
