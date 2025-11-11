@@ -5,7 +5,7 @@ import SwiftUI
 /// Professional camera settings with modern interface
 
 struct ModernSettingsPanel: View {
-    let camera: CameraController
+    @ObservedObject var camera: CameraController
     @Binding var showSettings: Bool
     @Binding var showGrid: Bool
     @Binding var gridType: GridType
