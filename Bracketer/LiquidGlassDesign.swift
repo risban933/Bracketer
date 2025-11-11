@@ -1,316 +1,319 @@
 import SwiftUI
 import AVFoundation
 
-/// Liquid Glass design implementation for iOS 26+ camera interface
-/// Provides dynamic translucency, blur effects, and reactive materials
-extension ModernDesignSystem {
-    
-    // MARK: - Liquid Glass Materials
-    struct LiquidGlass {
-        
-        /// Primary liquid glass material with dynamic opacity
-        static func primary(intensity: Double = 0.8) -> some View {
-            ZStack {
-                // Base glass layer
-                Rectangle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(intensity * 0.6)
-                
-                // Color reflection layer
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                .white.opacity(0.2),
-                                .clear,
-                                .white.opacity(0.1)
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .blendMode(.overlay)
-                
-                // Edge highlights
-                Rectangle()
-                    .stroke(
-                        LinearGradient(
-                            colors: [
-                                .white.opacity(0.4),
-                                .clear,
-                                .white.opacity(0.2)
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 1
-                    )
+/// iOS 26+ Liquid Glass design implementation using official Apple API
+/// Provides dynamic translucency, tinting, and reactive materials
+/// Requires iOS 26.0 or later
+
+@available(iOS 26.0, *)
+extension View {
+
+    // MARK: - Liquid Glass Effect Modifiers
+
+    /// Apply standard liquid glass effect
+    func liquidGlass(
+        intensity: GlassIntensity = .regular,
+        tint: Color? = nil,
+        interactive: Bool = false
+    ) -> some View {
+        self.modifier(LiquidGlassModifier(intensity: intensity, tint: tint, interactive: interactive))
+    }
+
+    /// Apply liquid glass effect with camera-specific styling
+    func cameraGlass(
+        tint: Color? = nil,
+        interactive: Bool = false
+    ) -> some View {
+        self.liquidGlass(intensity: .regular, tint: tint, interactive: interactive)
+    }
+
+    /// Apply liquid glass effect for overlay components (toolbars, panels)
+    func overlayGlass(
+        style: OverlayGlassStyle = .standard,
+        interactive: Bool = false
+    ) -> some View {
+        self.modifier(OverlayGlassModifier(style: style, interactive: interactive))
+    }
+}
+
+// MARK: - Glass Intensity Levels
+
+@available(iOS 26.0, *)
+enum GlassIntensity {
+    case subtle
+    case regular
+    case prominent
+
+    var material: Material {
+        switch self {
+        case .subtle: return .ultraThin
+        case .regular: return .regular
+        case .prominent: return .thick
+        }
+    }
+}
+
+// MARK: - Overlay Glass Styles
+
+@available(iOS 26.0, *)
+enum OverlayGlassStyle {
+    case standard
+    case toolbar
+    case panel
+    case control
+    case warning
+    case success
+    case error
+
+    var tintColor: Color? {
+        switch self {
+        case .standard, .toolbar, .panel, .control:
+            return nil
+        case .warning:
+            return .orange
+        case .success:
+            return .green
+        case .error:
+            return .red
+        }
+    }
+
+    var intensity: GlassIntensity {
+        switch self {
+        case .standard, .toolbar:
+            return .regular
+        case .panel:
+            return .prominent
+        case .control:
+            return .subtle
+        case .warning, .success, .error:
+            return .regular
+        }
+    }
+}
+
+// MARK: - Liquid Glass Modifier (iOS 26)
+
+@available(iOS 26.0, *)
+struct LiquidGlassModifier: ViewModifier {
+    let intensity: GlassIntensity
+    let tint: Color?
+    let interactive: Bool
+
+    func body(content: Content) -> some View {
+        if let tint = tint {
+            // iOS 26.1+ tinted glass effect
+            if interactive {
+                content
+                    .glassEffect(intensity.material.tint(tint))
+                    .interactive()
+            } else {
+                content
+                    .glassEffect(intensity.material.tint(tint))
+            }
+        } else {
+            // Standard glass effect
+            if interactive {
+                content
+                    .glassEffect(intensity.material)
+                    .interactive()
+            } else {
+                content
+                    .glassEffect(intensity.material)
             }
         }
-        
-        /// Secondary liquid glass for subtle elements
-        static func secondary(intensity: Double = 0.4) -> some View {
-            ZStack {
-                Rectangle()
-                    .fill(.thinMaterial)
-                    .opacity(intensity)
-                
-                Rectangle()
-                    .fill(
-                        RadialGradient(
-                            colors: [
-                                .white.opacity(0.1),
-                                .clear
-                            ],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 100
-                        )
-                    )
-                    .blendMode(.softLight)
-            }
+    }
+}
+
+// MARK: - Overlay Glass Modifier
+
+@available(iOS 26.0, *)
+struct OverlayGlassModifier: ViewModifier {
+    let style: OverlayGlassStyle
+    let interactive: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .liquidGlass(
+                intensity: style.intensity,
+                tint: style.tintColor,
+                interactive: interactive
+            )
+    }
+}
+
+// MARK: - Glass Effect Container (for grouped elements)
+
+@available(iOS 26.0, *)
+struct LiquidGlassContainer<Content: View>: View {
+    let tint: Color?
+    let intensity: GlassIntensity
+    let content: Content
+
+    init(
+        tint: Color? = nil,
+        intensity: GlassIntensity = .regular,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.tint = tint
+        self.intensity = intensity
+        self.content = content()
+    }
+
+    var body: some View {
+        GlassEffectContainer {
+            content
+                .liquidGlass(intensity: intensity, tint: tint)
         }
-        
-        /// Interactive liquid glass that responds to touch
-        static func interactive(isPressed: Bool, intensity: Double = 0.7) -> some View {
-            ZStack {
-                Rectangle()
-                    .fill(.regularMaterial)
-                    .opacity(isPressed ? intensity * 1.2 : intensity)
-                
-                // Ripple effect on press
-                if isPressed {
+    }
+}
+
+// MARK: - Liquid Glass Button Styles
+
+@available(iOS 26.0, *)
+struct LiquidGlassButtonStyle: ButtonStyle {
+    let tint: Color?
+    let isActive: Bool
+
+    init(tint: Color? = nil, isActive: Bool = false) {
+        self.tint = tint
+        self.isActive = isActive
+    }
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .liquidGlass(
+                        intensity: isActive ? .prominent : .regular,
+                        tint: isActive ? (tint ?? .accentColor) : tint,
+                        interactive: true
+                    )
+            )
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Pre-iOS 26 Fallback Implementation
+
+struct LegacyLiquidGlassModifier: ViewModifier {
+    let intensity: CGFloat
+    let tint: Color?
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                ZStack {
+                    // Base material
+                    Rectangle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(intensity * 0.6)
+
+                    // Tint layer (if provided)
+                    if let tint = tint {
+                        Rectangle()
+                            .fill(tint.opacity(0.2))
+                            .blendMode(.overlay)
+                    }
+
+                    // Highlight gradient
                     Rectangle()
                         .fill(
-                            RadialGradient(
+                            LinearGradient(
                                 colors: [
-                                    .white.opacity(0.3),
-                                    .clear
+                                    .white.opacity(0.2),
+                                    .clear,
+                                    .white.opacity(0.1)
                                 ],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 50
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
                         )
-                        .scaleEffect(isPressed ? 1.5 : 1.0)
-                        .animation(.easeOut(duration: 0.3), value: isPressed)
+                        .blendMode(.overlay)
                 }
-                
-                Rectangle()
-                    .stroke(.white.opacity(0.2), lineWidth: 1)
-            }
-        }
-    }
-    
-    // MARK: - Liquid Glass Modifiers
-    struct LiquidGlassModifier: ViewModifier {
-        let style: LiquidGlassStyle
-        let intensity: Double
-        let cornerRadius: CGFloat
-        
-        enum LiquidGlassStyle {
-            case primary, secondary, interactive, overlay
-        }
-        
-        func body(content: Content) -> some View {
-            content
-                .background(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(backgroundMaterial)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: cornerRadius)
-                                .fill(overlayGradient)
-                                .blendMode(.overlay)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: cornerRadius)
-                                .stroke(borderGradient, lineWidth: 1)
-                        )
-                )
-        }
-        
-        private var backgroundMaterial: some ShapeStyle {
-            switch style {
-            case .primary: return .regularMaterial
-            case .secondary: return .thinMaterial
-            case .interactive: return .thickMaterial
-            case .overlay: return .ultraThinMaterial
-            }
-        }
-        
-        private var overlayGradient: some ShapeStyle {
-            LinearGradient(
-                colors: [
-                    .white.opacity(intensity * 0.3),
-                    .clear,
-                    .white.opacity(intensity * 0.1)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
             )
-        }
-        
-        private var borderGradient: some ShapeStyle {
-            LinearGradient(
-                colors: [
-                    .white.opacity(intensity * 0.6),
-                    .white.opacity(intensity * 0.2),
-                    .white.opacity(intensity * 0.4)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        }
-    }
-    
-    // MARK: - Reactive Liquid Glass
-    struct ReactiveLiquidGlass: ViewModifier {
-        @State private var hoverLocation: CGPoint = .zero
-        @State private var isHovering = false
-        let cornerRadius: CGFloat
-        
-        func body(content: Content) -> some View {
-            content
-                .background(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(.regularMaterial)
-                        .overlay(
-                            // Dynamic highlight that follows interaction
-                            Circle()
-                                .fill(
-                                    RadialGradient(
-                                        colors: [
-                                            .white.opacity(0.4),
-                                            .white.opacity(0.1),
-                                            .clear
-                                        ],
-                                        center: UnitPoint(
-                                            x: hoverLocation.x / 200,
-                                            y: hoverLocation.y / 200
-                                        ),
-                                        startRadius: 0,
-                                        endRadius: 60
-                                    )
-                                )
-                                .frame(width: 120, height: 120)
-                                .position(hoverLocation)
-                                .opacity(isHovering ? 1 : 0)
-                                .animation(.easeOut(duration: 0.3), value: isHovering)
-                                .blendMode(.overlay)
-                                .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: cornerRadius)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [
-                                            .white.opacity(0.4),
-                                            .white.opacity(0.1),
-                                            .white.opacity(0.2)
-                                        ],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    lineWidth: 1
-                                )
-                        )
-                )
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { value in
-                            hoverLocation = value.location
-                            isHovering = true
-                        }
-                        .onEnded { _ in
-                            isHovering = false
-                        }
-                )
-        }
     }
 }
 
-// MARK: - View Extensions for Liquid Glass
+// MARK: - Backward Compatibility Extensions
+
 extension View {
-    
-    /// Apply liquid glass effect with customization
-    func liquidGlass(
-        style: ModernDesignSystem.LiquidGlassModifier.LiquidGlassStyle = .primary,
-        intensity: Double = 0.7,
-        cornerRadius: CGFloat = ModernDesignSystem.CornerRadius.medium
+    /// Apply liquid glass effect with fallback for pre-iOS 26
+    func liquidGlassCompatible(
+        intensity: CGFloat = 0.7,
+        tint: Color? = nil,
+        interactive: Bool = false
     ) -> some View {
-        self.modifier(
-            ModernDesignSystem.LiquidGlassModifier(
-                style: style,
-                intensity: intensity,
-                cornerRadius: cornerRadius
-            )
-        )
-    }
-    
-    /// Apply reactive liquid glass that responds to touch
-    func reactiveLiquidGlass(
-        cornerRadius: CGFloat = ModernDesignSystem.CornerRadius.medium
-    ) -> some View {
-        self.modifier(
-            ModernDesignSystem.ReactiveLiquidGlass(cornerRadius: cornerRadius)
-        )
+        if #available(iOS 26.0, *) {
+            let glassIntensity: GlassIntensity = intensity < 0.4 ? .subtle : (intensity > 0.8 ? .prominent : .regular)
+            return AnyView(self.liquidGlass(intensity: glassIntensity, tint: tint, interactive: interactive))
+        } else {
+            return AnyView(self.modifier(LegacyLiquidGlassModifier(intensity: intensity, tint: tint)))
+        }
     }
 }
 
-// MARK: - Enhanced EV Control with Liquid Glass
+// MARK: - Enhanced EV Control with Liquid Glass (iOS 26)
+
+@available(iOS 26.0, *)
 struct LiquidGlassEVControl: View {
     @Binding var currentEV: Float
     @Binding var isLocked: Bool
-    
+
     private let evRange: ClosedRange<Float> = -3.0...3.0
     private let stepSize: Float = 0.3
-    
+
     var body: some View {
-        HStack(spacing: ModernDesignSystem.Spacing.md) {
-            // EV lock button
-            Button {
-                withAnimation(ModernDesignSystem.Animations.spring) {
-                    isLocked.toggle()
+        LiquidGlassContainer(tint: isLocked ? .orange : nil, intensity: .regular) {
+            HStack(spacing: 12) {
+                // EV lock button
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        isLocked.toggle()
+                    }
+                    HapticManager.shared.exposureAdjusted()
+                } label: {
+                    Image(systemName: isLocked ? "lock.fill" : "lock.open")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(isLocked ? .orange : .white)
                 }
-                HapticManager.shared.exposureAdjusted()
-            } label: {
-                Image(systemName: isLocked ? "lock.fill" : "lock.open")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(isLocked ? ModernDesignSystem.Colors.warning : ModernDesignSystem.Colors.cameraControl)
-            }
-            .liquidGlass(style: .secondary, intensity: isLocked ? 0.8 : 0.4)
-            .frame(width: 40, height: 40)
-            
-            // EV compensation slider
-            VStack(spacing: ModernDesignSystem.Spacing.xs) {
-                HStack {
-                    Text("EV")
-                        .font(ModernDesignSystem.Typography.caption)
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                    
-                    Spacer()
-                    
-                    Text(formatEV(currentEV))
-                        .font(ModernDesignSystem.Typography.monospaceSmall)
-                        .foregroundColor(currentEV == 0 ? ModernDesignSystem.Colors.cameraControl : ModernDesignSystem.Colors.warning)
-                        .monospacedDigit()
+                .frame(width: 40, height: 40)
+                .liquidGlass(tint: isLocked ? .orange : nil, interactive: true)
+
+                // EV compensation slider
+                VStack(spacing: 4) {
+                    HStack {
+                        Text("EV")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+
+                        Spacer()
+
+                        Text(formatEV(currentEV))
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(currentEV == 0 ? .white : .orange)
+                            .monospacedDigit()
+                    }
+
+                    // Custom EV slider with liquid glass track
+                    LiquidGlassEVSlider(
+                        value: $currentEV,
+                        range: evRange,
+                        step: stepSize,
+                        isLocked: isLocked
+                    )
+                    .frame(height: 30)
                 }
-                
-                // Custom EV slider with liquid glass track
-                LiquidGlassEVSlider(
-                    value: $currentEV,
-                    range: evRange,
-                    step: stepSize,
-                    isLocked: isLocked
-                )
-                .frame(height: 30)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
             }
-            .padding(.horizontal, ModernDesignSystem.Spacing.md)
-            .padding(.vertical, ModernDesignSystem.Spacing.sm)
-            .liquidGlass(style: .primary, intensity: 0.6)
+            .padding(8)
         }
     }
-    
+
     private func formatEV(_ value: Float) -> String {
         if value == 0 {
             return "±0"
@@ -322,40 +325,41 @@ struct LiquidGlassEVControl: View {
     }
 }
 
+@available(iOS 26.0, *)
 struct LiquidGlassEVSlider: View {
     @Binding var value: Float
     let range: ClosedRange<Float>
     let step: Float
     let isLocked: Bool
-    
+
     @State private var isDragging = false
-    
+
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .leading) {
-                // Track background
+                // Track background with glass effect
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(ModernDesignSystem.LiquidGlass.secondary(intensity: 0.3))
+                    .liquidGlass(intensity: .subtle, tint: .white.opacity(0.1))
                     .frame(height: 8)
-                
+
                 // Center line (0 EV)
                 Rectangle()
-                    .fill(ModernDesignSystem.Colors.cameraControl.opacity(0.5))
+                    .fill(.white.opacity(0.5))
                     .frame(width: 2, height: 12)
                     .position(x: geometry.size.width / 2, y: 15)
-                
-                // EV value indicator
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(
-                        value == 0 ? 
-                        ModernDesignSystem.Colors.cameraControl :
-                        ModernDesignSystem.Colors.warning
+
+                // EV value indicator with glass effect
+                Circle()
+                    .liquidGlass(
+                        intensity: .prominent,
+                        tint: value == 0 ? nil : .orange,
+                        interactive: true
                     )
-                    .frame(width: 12, height: 12)
+                    .frame(width: 20, height: 20)
                     .position(x: sliderPosition(in: geometry), y: 15)
-                    .scaleEffect(isDragging ? 1.3 : 1.0)
-                    .animation(ModernDesignSystem.Animations.spring, value: isDragging)
-                
+                    .scaleEffect(isDragging ? 1.2 : 1.0)
+                    .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isDragging)
+
                 // Interactive overlay
                 Rectangle()
                     .fill(Color.clear)
@@ -378,12 +382,12 @@ struct LiquidGlassEVSlider: View {
             }
         }
     }
-    
+
     private func sliderPosition(in geometry: GeometryProxy) -> CGFloat {
         let normalizedValue = (value - range.lowerBound) / (range.upperBound - range.lowerBound)
         return geometry.size.width * CGFloat(normalizedValue)
     }
-    
+
     private func valueFromPosition(_ position: CGFloat, in geometry: GeometryProxy) -> Float {
         let normalizedPosition = position / geometry.size.width
         return range.lowerBound + Float(normalizedPosition) * (range.upperBound - range.lowerBound)
@@ -391,33 +395,35 @@ struct LiquidGlassEVSlider: View {
 }
 
 // MARK: - Liquid Glass Progress Indicators
+
+@available(iOS 26.0, *)
 struct LiquidGlassProgressView: View {
     let progress: Double
     let title: String
     let subtitle: String?
-    
+
     init(progress: Double, title: String, subtitle: String? = nil) {
         self.progress = progress
         self.title = title
         self.subtitle = subtitle
     }
-    
+
     var body: some View {
-        VStack(spacing: ModernDesignSystem.Spacing.md) {
+        VStack(spacing: 16) {
             // Progress ring with liquid glass background
             ZStack {
                 Circle()
-                    .stroke(ModernDesignSystem.Colors.cameraControlSecondary, lineWidth: 4)
+                    .stroke(Color.white.opacity(0.3), lineWidth: 4)
                     .frame(width: 80, height: 80)
-                
+
                 Circle()
                     .trim(from: 0, to: progress)
                     .stroke(
                         AngularGradient(
                             colors: [
-                                ModernDesignSystem.Colors.cameraControlActive,
-                                ModernDesignSystem.Colors.cameraControlActive.opacity(0.6),
-                                ModernDesignSystem.Colors.cameraControlActive
+                                .cyan,
+                                .blue,
+                                .cyan
                             ],
                             center: .center,
                             startAngle: .degrees(-90),
@@ -428,30 +434,33 @@ struct LiquidGlassProgressView: View {
                     .frame(width: 80, height: 80)
                     .rotationEffect(.degrees(-90))
                     .animation(.easeInOut(duration: 0.5), value: progress)
-                
+
                 Text("\(Int(progress * 100))%")
-                    .font(ModernDesignSystem.Typography.bodyEmphasized)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white)
                     .monospacedDigit()
             }
-            
-            VStack(spacing: ModernDesignSystem.Spacing.xs) {
+
+            VStack(spacing: 4) {
                 Text(title)
-                    .font(ModernDesignSystem.Typography.bodyEmphasized)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+
                 if let subtitle = subtitle {
                     Text(subtitle)
-                        .font(ModernDesignSystem.Typography.caption)
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
                 }
             }
         }
-        .padding(ModernDesignSystem.Spacing.xl)
-        .liquidGlass(style: .overlay, intensity: 0.8)
+        .padding(24)
+        .liquidGlass(intensity: .prominent, tint: .blue.opacity(0.3))
     }
 }
 
+// MARK: - Preview
+
+@available(iOS 26.0, *)
 #Preview("EV Control") {
     ZStack {
         Color.black.ignoresSafeArea()
@@ -460,7 +469,7 @@ struct LiquidGlassProgressView: View {
                 currentEV: .constant(0.0),
                 isLocked: .constant(false)
             )
-            
+
             LiquidGlassEVControl(
                 currentEV: .constant(1.3),
                 isLocked: .constant(true)
@@ -470,6 +479,7 @@ struct LiquidGlassProgressView: View {
     }
 }
 
+@available(iOS 26.0, *)
 #Preview("Liquid Glass Progress") {
     ZStack {
         Color.black.ignoresSafeArea()

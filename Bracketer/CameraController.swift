@@ -390,21 +390,22 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                 return
             }
 
-            // Enforce fixed 4-shot bracket plan ignoring arguments
-            self.sequenceEVStep = 1.0
-            self.plannedEVs = [0, 0, +1, -1]
-
             self.sequenceInFlight = true
-            self.sequenceStep = 0
+            self.sequenceEVStep = evStep
             self.sequenceTimestamp = Int(Date().timeIntervalSince1970)
             self.rawPixelFormat = self.chooseRawPixelFormat()
-            guard self.rawPixelFormat != nil else {
+            guard let rawFmt = self.rawPixelFormat else {
                 self.sequenceInFlight = false
                 self.postError("No RAW format available.")
                 return
             }
 
-            // Prepare device for auto to measure baseline (no capture)
+            // Build bracket plan based on parameters
+            let evOffsets = self.buildBracketEVOffsets(evStep: evStep, shotCount: shotCount)
+            self.plannedEVs = evOffsets
+            Logger.camera("Starting bracket capture with \(shotCount) shots at ±\(evStep) EV: \(evOffsets)")
+
+            // Prepare device for auto exposure to establish baseline
             do {
                 try dev.lockForConfiguration()
                 if dev.isExposureModeSupported(.continuousAutoExposure) {
@@ -424,6 +425,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                 return
             }
 
+            // Wait for AE to settle before capturing bracket
             self.settleAutoExposure { [weak self] in
                 guard let self = self else { return }
                 self.applyRotation(to: self.photoOutput.connection(with: .video))
@@ -432,11 +434,53 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                     self.captureProgress = 0
                     HapticManager.shared.captureStarted()
                 }
-                // Read baseline without capturing
-                self.extractBaselineFromDevice()
-                // Proceed to first shot (0 EV)
-                self.proceedToNextShot()
+
+                // Capture using Apple's bracketing API
+                self.captureBracketSequenceWithAPI(evOffsets: evOffsets, rawFormat: rawFmt)
             }
+        }
+    }
+
+    // MARK: - Apple Bracketing API Implementation
+    private func captureBracketSequenceWithAPI(evOffsets: [Float], rawFormat: OSType) {
+        // Create bracketed still image settings using Apple's API
+        let bracketSettings: [AVCapturePhotoBracketSettings] = evOffsets.map { evOffset in
+            AVCaptureAutoExposureBracketedStillImageSettings.autoExposureSettings(exposureTargetBias: evOffset)
+        }
+
+        // Create photo settings for bracketed capture
+        let photoSettings = AVCapturePhotoBracketSettings(
+            rawPixelFormatType: rawFormat,
+            processedFormat: nil,
+            bracketedSettings: bracketSettings
+        )
+
+        if #available(iOS 16.0, *), let dims = self.maxPhotoDims {
+            photoSettings.maxPhotoDimensions = dims
+        }
+        photoSettings.flashMode = .off
+        photoSettings.isAutoStillImageStabilizationEnabled = true
+
+        // Store expected shot count for progress tracking
+        self.sequenceStep = 0
+
+        Logger.camera("Capturing bracket with \(bracketSettings.count) exposures using AVCapturePhotoBracketSettings")
+
+        // Capture the entire bracket atomically
+        self.photoOutput.capturePhoto(with: photoSettings, delegate: self)
+    }
+
+    private func buildBracketEVOffsets(evStep: Float, shotCount: Int) -> [Float] {
+        switch shotCount {
+        case 3:
+            return [-evStep, 0, +evStep]
+        case 5:
+            return [-2*evStep, -evStep, 0, +evStep, +2*evStep]
+        case 7:
+            return [-3*evStep, -2*evStep, -evStep, 0, +evStep, +2*evStep, +3*evStep]
+        default:
+            // Default to 3-shot bracket
+            return [-evStep, 0, +evStep]
         }
     }
 
@@ -458,198 +502,6 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         self.sessionQueue.async { check() }
     }
 
-    private func buildBracketPlan(evStep: Float, shotCount: Int) -> [Float] {
-        // Always include baseline 0 EV
-        if shotCount >= 5 {
-            return [0, +evStep, -evStep, +(2*evStep), -(2*evStep)]
-        } else {
-            return [0, +evStep, -evStep]
-        }
-    }
-
-    private func extractBaselineFromDevice() {
-        guard let dev = self.device else { return }
-        self.baseWBGains = dev.deviceWhiteBalanceGains
-        self.baseISO = dev.iso
-        self.baseShutterSpeed = dev.exposureDuration
-        self.baseFocusPosition = dev.lensPosition
-    }
-
-    private func captureManualAutoAtZeroEV() {
-        guard let dev = self.device, let rawFmt = self.rawPixelFormat else { return }
-        // Perform a short AE settle with a small positive bias to obtain a distinct shutter time while keeping ISO fixed at baseISO for capture
-        do {
-            try dev.lockForConfiguration()
-            if dev.isExposureModeSupported(.continuousAutoExposure) {
-                dev.exposureMode = .continuousAutoExposure
-            }
-            // Small target bias to differentiate from baseline AE
-            dev.setExposureTargetBias(0.3, completionHandler: nil)
-            dev.unlockForConfiguration()
-        } catch {
-            self.postError("Manual auto setup failed: \(error.localizedDescription)")
-            self.finishSequence()
-            return
-        }
-
-        self.settleAutoExposure { [weak self] in
-            guard let self = self, let dev = self.device else { return }
-            let s1 = dev.exposureDuration // read AE-computed shutter
-            // Lock and capture using baseISO and AE-computed shutter
-            do {
-                try dev.lockForConfiguration()
-                if dev.isExposureModeSupported(.custom) {
-                    dev.exposureMode = .custom
-                    dev.setExposureModeCustom(duration: s1, iso: self.baseISO) { _ in
-                        DispatchQueue.global().asyncAfter(deadline: .now() + 0.05) {
-                            let settings = AVCapturePhotoSettings(rawPixelFormatType: rawFmt)
-                            if #available(iOS 16.0, *), let dims = self.maxPhotoDims {
-                                settings.maxPhotoDimensions = dims
-                            }
-                            settings.flashMode = .off
-                            self.photoOutput.capturePhoto(with: settings, delegate: self)
-                        }
-                    }
-                }
-                if dev.isWhiteBalanceModeSupported(.locked) {
-                    let clamped = self.clampWBGains(self.baseWBGains, for: dev)
-                    dev.setWhiteBalanceModeLocked(with: clamped, completionHandler: nil)
-                }
-                if dev.isFocusModeSupported(.locked) {
-                    dev.setFocusModeLocked(lensPosition: self.baseFocusPosition, completionHandler: nil)
-                }
-                // Reset bias for subsequent shots
-                dev.setExposureTargetBias(0.0, completionHandler: nil)
-                dev.unlockForConfiguration()
-            } catch {
-                self.postError("Manual auto capture failed: \(error.localizedDescription)")
-                self.finishSequence()
-                return
-            }
-        }
-    }
-
-    private func captureWithLockedSettings() {
-        guard let dev = self.device, let rawFmt = self.rawPixelFormat else { return }
-
-        do {
-            try dev.lockForConfiguration()
-            if dev.isExposureModeSupported(.custom) {
-                dev.exposureMode = .custom
-                dev.setExposureModeCustom(duration: baseShutterSpeed, iso: baseISO) { _ in
-                    // exposure applied
-                    DispatchQueue.global().asyncAfter(deadline: .now() + 0.05) {
-                        let settings = AVCapturePhotoSettings(rawPixelFormatType: rawFmt)
-                        if #available(iOS 16.0, *), let dims = self.maxPhotoDims {
-                            settings.maxPhotoDimensions = dims
-                        }
-                        settings.flashMode = .off
-                        self.photoOutput.capturePhoto(with: settings, delegate: self)
-                    }
-                }
-            }
-            if dev.isWhiteBalanceModeSupported(.locked) {
-                let clamped = self.clampWBGains(self.baseWBGains, for: dev)
-                dev.setWhiteBalanceModeLocked(with: clamped, completionHandler: nil)
-            }
-            if dev.isFocusModeSupported(.locked) {
-                dev.setFocusModeLocked(lensPosition: baseFocusPosition, completionHandler: nil)
-            }
-            dev.unlockForConfiguration()
-        } catch {
-            self.postError("Manual lock failed: \(error.localizedDescription)")
-            self.finishSequence()
-            return
-        }
-    }
-
-    private func captureWithEVAdjustment(evOffset: Float) {
-        guard let dev = self.device, let rawFmt = self.rawPixelFormat else { return }
-
-        do {
-            try dev.lockForConfiguration()
-
-            let minDuration = CMTimeGetSeconds(dev.activeFormat.minExposureDuration)
-            let maxDuration = CMTimeGetSeconds(dev.activeFormat.maxExposureDuration)
-
-            let currentDuration = CMTimeGetSeconds(baseShutterSpeed)
-            let exposureMultiplier = pow(2.0, Double(evOffset))
-            let targetDuration = currentDuration * exposureMultiplier
-            let clampedDuration = min(max(targetDuration, minDuration), maxDuration)
-
-            let newShutterSpeed = CMTime(seconds: clampedDuration, preferredTimescale: Constants.preferredTimescale)
-
-            if dev.isExposureModeSupported(.custom) {
-                dev.exposureMode = .custom
-                dev.setExposureModeCustom(duration: newShutterSpeed, iso: self.baseISO) { _ in
-                    DispatchQueue.global().asyncAfter(deadline: .now() + 0.05) {
-                        let settings = AVCapturePhotoSettings(rawPixelFormatType: rawFmt)
-                        if #available(iOS 16.0, *), let dims = self.maxPhotoDims {
-                            settings.maxPhotoDimensions = dims
-                        }
-                        settings.flashMode = .off
-                        self.photoOutput.capturePhoto(with: settings, delegate: self)
-                    }
-                }
-            }
-
-            if dev.isWhiteBalanceModeSupported(.locked) {
-                let clamped = self.clampWBGains(self.baseWBGains, for: dev)
-                dev.setWhiteBalanceModeLocked(with: clamped, completionHandler: nil)
-            }
-
-            if dev.isFocusModeSupported(.locked) {
-                dev.setFocusModeLocked(lensPosition: baseFocusPosition, completionHandler: nil)
-            }
-
-            dev.unlockForConfiguration()
-        } catch {
-            self.postError("EV adjustment failed: \(error.localizedDescription)")
-            self.finishSequence()
-            return
-        }
-    }
-
-    private func extractBaselineMetadata() {
-        guard let dev = self.device else { return }
-        self.baseWBGains = dev.deviceWhiteBalanceGains
-        self.baseISO = dev.iso
-        self.baseShutterSpeed = dev.exposureDuration
-        self.baseFocusPosition = dev.lensPosition
-    }
-
-    private func proceedToNextShot() {
-        guard sequenceStep < plannedEVs.count else {
-            self.main {
-                self.captureProgress = 4
-                HapticManager.shared.captureCompleted()
-            }
-            self.finishSequence()
-            return
-        }
-
-        let ev = plannedEVs[sequenceStep]
-        // Update UI progress (0: baseline, 1..)
-        self.main {
-            switch self.sequenceStep {
-            case 0: self.captureProgress = 1; Logger.camera("Bracket: Baseline shot (0 EV)")
-            case 1: self.captureProgress = 2; HapticManager.shared.bracketShotCaptured(); Logger.camera("Bracket: Manual auto (0 EV)")
-            case 2: self.captureProgress = 3; HapticManager.shared.bracketShotCaptured(); Logger.camera("Bracket: +1EV shot")
-            case 3: self.captureProgress = 4; HapticManager.shared.bracketShotCaptured(); Logger.camera("Bracket: -1EV shot")
-            default: break
-            }
-        }
-
-        if ev == 0 {
-            if self.sequenceStep == 0 {
-                self.captureWithLockedSettings()
-            } else {
-                self.captureManualAutoAtZeroEV()
-            }
-        } else {
-            self.captureWithEVAdjustment(evOffset: ev)
-        }
-    }
 
     private func finishSequence() {
         if let dev = self.device {
@@ -767,26 +619,17 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
         guard let data = photo.fileDataRepresentation() else { return }
         let loc = locationProvider.latestLocation
 
-        if sequenceStep == 0 {
-            if let exif = photo.metadata["{Exif}"] as? [String: Any],
-               let isoArray = exif["ISOSpeedRatings"] as? [NSNumber],
-               let iso = isoArray.first?.floatValue,
-               let expTime = exif["ExposureTime"] as? Double {
-                sessionQueue.async {
-                    self.baseISO = iso
-                    self.baseShutterSpeed = CMTime(seconds: expTime, preferredTimescale: Constants.preferredTimescale)
-                }
-            }
-        }
-
+        // For bracketed capture, each photo comes through here
         if photo.isRawPhoto {
             let bracketLabel: String?
             if self.sequenceStep < self.plannedEVs.count {
                 let ev = self.plannedEVs[self.sequenceStep]
                 if ev == 0 {
                     bracketLabel = "0EV"
+                } else if ev > 0 {
+                    bracketLabel = "+\(String(format: "%.1f", ev))EV"
                 } else {
-                    bracketLabel = ev > 0 ? "+\(Int(ev))EV" : "\(Int(ev))EV"
+                    bracketLabel = "\(String(format: "%.1f", ev))EV"
                 }
             } else {
                 bracketLabel = nil
@@ -798,6 +641,17 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
                                            bracketLabel: bracketLabel)
             if let assetId = assetId {
                 self.bracketAssetIds.append(assetId)
+                Logger.photo("Saved bracket photo \(self.sequenceStep + 1)/\(self.plannedEVs.count): \(bracketLabel ?? "unknown")")
+            }
+
+            // Update progress
+            self.sequenceStep += 1
+            let progress = min(self.sequenceStep, self.plannedEVs.count)
+            self.main {
+                self.captureProgress = progress
+                if progress < self.plannedEVs.count {
+                    HapticManager.shared.bracketShotCaptured()
+                }
             }
         }
     }
@@ -805,9 +659,21 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishCaptureFor resolvedSettings: AVCaptureResolvedPhotoSettings, error: Error?) {
         if let error {
             postError("Finish error: \(error.localizedDescription)")
+            self.finishSequence()
+            return
         }
+
+        // For bracketed capture, this is called once after all photos complete
+        Logger.camera("Bracket capture completed for sequence with \(self.plannedEVs.count) shots")
+
+        self.main {
+            self.captureProgress = self.plannedEVs.count
+            HapticManager.shared.captureCompleted()
+        }
+
+        // Finish the sequence
         sessionQueue.async {
-            self.proceedToNextShot()
+            self.finishSequence()
         }
     }
 }

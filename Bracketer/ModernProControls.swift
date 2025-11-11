@@ -1,9 +1,10 @@
 import SwiftUI
 
 // MARK: - Modern Pro Controls Panel
-/// Apple Camera app inspired pro controls with Halide professional features
-/// Implements iOS 18+ design patterns for professional photography
+/// Apple Camera app inspired pro controls with iOS 26 Liquid Glass design
+/// Implements tinted glass effects for professional photography controls
 
+@available(iOS 26.0, *)
 struct ModernProControls: View {
     let camera: CameraController
     @Binding var showProControls: Bool
@@ -14,59 +15,59 @@ struct ModernProControls: View {
     @Binding var focusPeakingColor: Color
     @Binding var focusPeakingIntensity: Float
     @Binding var bracketShotCount: Int
-    
+
     // Manual controls
     @State private var manualISO: Float = 100
     @State private var manualShutterSpeed: Float = 0.01
     @State private var whiteBalance: Float = 5500
     @State private var manualFocus: Float = 0.5
-    
+
     private let focusPeakingColors: [Color] = [.red, .blue, .yellow, .green, .orange, .purple, .white]
-    
+
     var body: some View {
         ZStack {
             // Background overlay
-            ModernDesignSystem.Colors.cameraOverlay
+            Color.black.opacity(0.4)
                 .ignoresSafeArea()
                 .onTapGesture {
-                    withAnimation(ModernDesignSystem.Animations.spring) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         showProControls = false
                     }
                 }
-            
-            // Pro controls panel
-            VStack(spacing: ModernDesignSystem.Spacing.xl) {
+
+            // Pro controls panel with purple tinted glass
+            VStack(spacing: 20) {
                 // Header
                 HStack {
                     Text("Pro Controls")
-                        .font(ModernDesignSystem.Typography.title2)
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                    
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundColor(.white)
+
                     Spacer()
-                    
+
                     Button {
-                        withAnimation(ModernDesignSystem.Animations.spring) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             showProControls = false
                         }
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 24))
-                            .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                            .foregroundColor(.white.opacity(0.7))
                     }
                 }
-                .padding(.horizontal, ModernDesignSystem.Spacing.lg)
-                
+                .padding(.horizontal, 24)
+
                 // Control sections
                 ScrollView {
-                    VStack(spacing: ModernDesignSystem.Spacing.lg) {
-                        // Exposure controls
+                    VStack(spacing: 16) {
+                        // Exposure controls with yellow tint
                         ModernExposureControls(
                             manualISO: $manualISO,
                             manualShutterSpeed: $manualShutterSpeed,
                             whiteBalance: $whiteBalance
                         )
-                        
-                        // Focus controls
+
+                        // Focus controls with green tint
                         ModernFocusControls(
                             manualFocus: $manualFocus,
                             focusPeakingEnabled: $focusPeakingEnabled,
@@ -74,8 +75,8 @@ struct ModernProControls: View {
                             focusPeakingIntensity: $focusPeakingIntensity,
                             focusPeakingColors: focusPeakingColors
                         )
-                        
-                        // Bracketing controls
+
+                        // Bracketing controls with orange tint
                         ModernBracketingControls(
                             selectedEVStep: $selectedEVStep,
                             currentEVCompensation: $currentEVCompensation,
@@ -83,35 +84,40 @@ struct ModernProControls: View {
                             bracketShotCount: $bracketShotCount
                         )
                     }
-                    .padding(.horizontal, ModernDesignSystem.Spacing.lg)
+                    .padding(.horizontal, 24)
                 }
             }
-            .padding(.vertical, ModernDesignSystem.Spacing.xl)
+            .padding(.vertical, 32)
             .frame(maxWidth: 400)
-            .modernCardStyle(.overlay)
-            .padding(.horizontal, ModernDesignSystem.Spacing.lg)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .overlayGlass(style: .panel, interactive: true)
+            )
+            .padding(.horizontal, 20)
         }
     }
 }
 
 // MARK: - Modern Exposure Controls
+
+@available(iOS 26.0, *)
 struct ModernExposureControls: View {
     @Binding var manualISO: Float
     @Binding var manualShutterSpeed: Float
     @Binding var whiteBalance: Float
-    
+
     var body: some View {
-        VStack(spacing: ModernDesignSystem.Spacing.lg) {
+        VStack(spacing: 16) {
             // Section header
             HStack {
                 Image(systemName: "sun.max.fill")
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControlActive)
+                    .foregroundColor(.yellow)
                 Text("Exposure")
-                    .font(ModernDesignSystem.Typography.bodyBold)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
                 Spacer()
             }
-            
+
             // ISO Control
             ModernSliderControl(
                 title: "ISO",
@@ -119,9 +125,9 @@ struct ModernExposureControls: View {
                 range: 25...25600,
                 step: 25,
                 format: { "\(Int($0))" },
-                color: ModernDesignSystem.Colors.cameraControlActive
+                color: .yellow
             )
-            
+
             // Shutter Speed Control
             ModernSliderControl(
                 title: "Shutter",
@@ -129,9 +135,9 @@ struct ModernExposureControls: View {
                 range: 0.0005...30,
                 step: 0.001,
                 format: formatShutterSpeed,
-                color: ModernDesignSystem.Colors.professional
+                color: .cyan
             )
-            
+
             // White Balance Control
             ModernSliderControl(
                 title: "White Balance",
@@ -139,12 +145,16 @@ struct ModernExposureControls: View {
                 range: 2500...10000,
                 step: 100,
                 format: { "\(Int($0))K" },
-                color: ModernDesignSystem.Colors.warning
+                color: .orange
             )
         }
-            .modernCardStyle(.glass)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .liquidGlass(intensity: .regular, tint: .yellow.opacity(0.3), interactive: false)
+        )
     }
-    
+
     private func formatShutterSpeed(_ duration: Float) -> String {
         if duration >= 1.0 {
             return String(format: "%.1fs", duration)
@@ -160,25 +170,27 @@ struct ModernExposureControls: View {
 }
 
 // MARK: - Modern Focus Controls
+
+@available(iOS 26.0, *)
 struct ModernFocusControls: View {
     @Binding var manualFocus: Float
     @Binding var focusPeakingEnabled: Bool
     @Binding var focusPeakingColor: Color
     @Binding var focusPeakingIntensity: Float
     let focusPeakingColors: [Color]
-    
+
     var body: some View {
-        VStack(spacing: ModernDesignSystem.Spacing.lg) {
+        VStack(spacing: 16) {
             // Section header
             HStack {
                 Image(systemName: "scope")
-                    .foregroundColor(ModernDesignSystem.Colors.success)
+                    .foregroundColor(.green)
                 Text("Focus")
-                    .font(ModernDesignSystem.Typography.bodyBold)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
                 Spacer()
             }
-            
+
             // Manual Focus Control
             ModernSliderControl(
                 title: "Focus",
@@ -186,59 +198,64 @@ struct ModernFocusControls: View {
                 range: 0...1,
                 step: 0.01,
                 format: { "\(Int($0 * 100))%" },
-                color: ModernDesignSystem.Colors.success
+                color: .green
             )
-            
+
             // Focus Peaking Toggle
             HStack {
                 Image(systemName: "eye")
-                    .foregroundColor(ModernDesignSystem.Colors.success)
+                    .foregroundColor(.green)
                 Text("Focus Peaking")
-                    .font(ModernDesignSystem.Typography.body)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                    .font(.system(size: 16))
+                    .foregroundColor(.white)
                 Spacer()
                 Toggle("", isOn: $focusPeakingEnabled)
                     .labelsHidden()
-                    .tint(ModernDesignSystem.Colors.success)
+                    .tint(.green)
             }
-            
+
             // Focus Peaking Controls
             if focusPeakingEnabled {
-                VStack(spacing: ModernDesignSystem.Spacing.md) {
+                VStack(spacing: 12) {
                     // Color selection
                     HStack {
                         Text("Color")
-                            .font(ModernDesignSystem.Typography.caption)
-                            .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.7))
                         Spacer()
                     }
-                    
-                    HStack(spacing: ModernDesignSystem.Spacing.md) {
+
+                    HStack(spacing: 12) {
                         ForEach(focusPeakingColors, id: \.self) { color in
                             Button {
                                 focusPeakingColor = color
+                                HapticManager.shared.exposureAdjusted()
                             } label: {
-                                Circle()
-                                    .fill(color.opacity(0.3))
-                                    .frame(width: 32, height: 32)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(color, lineWidth: focusPeakingColor == color ? 2 : 1)
-                                    )
-                                    .overlay(
-                                        Group {
-                                            if focusPeakingColor == color {
-                                                Image(systemName: "checkmark")
-                                                    .font(.system(size: 12, weight: .bold))
-                                                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                                            }
-                                        }
-                                    )
+                                ZStack {
+                                    Circle()
+                                        .fill(color.opacity(0.3))
+                                        .frame(width: 32, height: 32)
+                                        .overlay(
+                                            Circle()
+                                                .stroke(color, lineWidth: focusPeakingColor == color ? 3 : 1)
+                                        )
+                                        .liquidGlass(
+                                            intensity: .subtle,
+                                            tint: focusPeakingColor == color ? color.opacity(0.5) : nil,
+                                            interactive: true
+                                        )
+
+                                    if focusPeakingColor == color {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
                             }
                             .buttonStyle(.plain)
                         }
                     }
-                    
+
                     // Intensity control
                     ModernSliderControl(
                         title: "Intensity",
@@ -246,86 +263,151 @@ struct ModernFocusControls: View {
                         range: 0.1...1.0,
                         step: 0.1,
                         format: { "\(Int($0 * 100))%" },
-                        color: ModernDesignSystem.Colors.success
+                        color: .green
                     )
                 }
             }
         }
-            .modernCardStyle(.glass)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .liquidGlass(intensity: .regular, tint: .green.opacity(0.3), interactive: false)
+        )
     }
 }
 
 // MARK: - Modern Bracketing Controls
+
+@available(iOS 26.0, *)
 struct ModernBracketingControls: View {
     @Binding var selectedEVStep: Float
     @Binding var currentEVCompensation: Float
     @Binding var evCompensationLocked: Bool
     @Binding var bracketShotCount: Int
-    
+
     var body: some View {
-        VStack(spacing: ModernDesignSystem.Spacing.lg) {
+        VStack(spacing: 16) {
             // Section header
             HStack {
                 Image(systemName: "rectangle.stack")
-                    .foregroundColor(ModernDesignSystem.Colors.warning)
+                    .foregroundColor(.orange)
                 Text("Bracketing")
-                    .font(ModernDesignSystem.Typography.bodyBold)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
                 Spacer()
             }
-            
-            // EV Compensation
-            ModernEVControl(
-                currentEV: $currentEVCompensation,
-                isLocked: $evCompensationLocked
-            )
-            
+
+            // EV Compensation with inline glass effect
+            HStack {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        evCompensationLocked.toggle()
+                    }
+                    HapticManager.shared.exposureAdjusted()
+                } label: {
+                    Image(systemName: evCompensationLocked ? "lock.fill" : "lock.open")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(evCompensationLocked ? .red : .white)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            Circle()
+                                .liquidGlass(
+                                    intensity: .prominent,
+                                    tint: evCompensationLocked ? .red.opacity(0.5) : nil,
+                                    interactive: true
+                                )
+                        )
+                }
+                .buttonStyle(.plain)
+
+                VStack(spacing: 4) {
+                    HStack {
+                        Text("EV Compensation")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+                        Spacer()
+                        Text(formatEV(currentEVCompensation))
+                            .font(.system(.caption, design: .monospaced))
+                            .foregroundColor(.orange)
+                            .monospacedDigit()
+                    }
+
+                    Slider(value: $currentEVCompensation, in: -4.0...4.0, step: 0.1)
+                        .accentColor(.orange)
+                        .disabled(evCompensationLocked)
+                }
+            }
+
             // Bracketing sequence visualization
-            ModernBracketingSequence(evStep: selectedEVStep)
-            
+            ModernBracketingSequence(evStep: selectedEVStep, shotCount: bracketShotCount)
+
             // EV Step selection
-            HStack(spacing: ModernDesignSystem.Spacing.md) {
+            HStack(spacing: 12) {
                 ForEach([1, 2, 3], id: \.self) { value in
                     Button {
                         selectedEVStep = Float(value)
+                        HapticManager.shared.exposureAdjusted()
                     } label: {
                         Text("±\(value)")
-                            .font(ModernDesignSystem.Typography.bodyBold)
-                            .foregroundColor(selectedEVStep == Float(value) ? ModernDesignSystem.Colors.cameraBackground : ModernDesignSystem.Colors.cameraControl)
-                            .frame(width: 50, height: 50)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(selectedEVStep == Float(value) ? .black : .white)
+                            .frame(width: 60, height: 50)
                             .background(
                                 Circle()
-                                    .fill(selectedEVStep == Float(value) ? ModernDesignSystem.Colors.warning : ModernDesignSystem.Colors.glassBackground)
+                                    .liquidGlass(
+                                        intensity: selectedEVStep == Float(value) ? .prominent : .regular,
+                                        tint: selectedEVStep == Float(value) ? .orange : nil,
+                                        interactive: true
+                                    )
                             )
                     }
                     .buttonStyle(.plain)
                 }
             }
-            
+
             // Shot count selection
-            HStack(spacing: ModernDesignSystem.Spacing.md) {
-                ForEach([3, 5], id: \.self) { count in
+            HStack(spacing: 12) {
+                ForEach([3, 5, 7], id: \.self) { count in
                     Button {
                         bracketShotCount = count
+                        HapticManager.shared.exposureAdjusted()
                     } label: {
                         Text("\(count) shots")
-                            .font(ModernDesignSystem.Typography.bodyBold)
-                            .foregroundColor(bracketShotCount == count ? ModernDesignSystem.Colors.cameraBackground : ModernDesignSystem.Colors.cameraControl)
-                            .frame(width: 80, height: 36)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(bracketShotCount == count ? .black : .white)
+                            .frame(minWidth: 70, height: 36)
+                            .padding(.horizontal, 12)
                             .background(
                                 Capsule()
-                                    .fill(bracketShotCount == count ? ModernDesignSystem.Colors.professional : ModernDesignSystem.Colors.glassBackground)
+                                    .liquidGlass(
+                                        intensity: bracketShotCount == count ? .prominent : .regular,
+                                        tint: bracketShotCount == count ? .cyan : nil,
+                                        interactive: true
+                                    )
                             )
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
-            .modernCardStyle(.glass)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .liquidGlass(intensity: .regular, tint: .orange.opacity(0.3), interactive: false)
+        )
+    }
+
+    private func formatEV(_ value: Float) -> String {
+        if value == 0 {
+            return "±0"
+        }
+        return String(format: "%+.1f", value)
     }
 }
 
 // MARK: - Modern Slider Control
+
+@available(iOS 26.0, *)
 struct ModernSliderControl: View {
     let title: String
     @Binding var value: Float
@@ -333,123 +415,86 @@ struct ModernSliderControl: View {
     let step: Float
     let format: (Float) -> String
     let color: Color
-    
+
     var body: some View {
-        VStack(spacing: ModernDesignSystem.Spacing.sm) {
+        VStack(spacing: 8) {
             HStack {
                 Text(title)
-                    .font(ModernDesignSystem.Typography.body)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                    .font(.system(size: 14))
+                    .foregroundColor(.white.opacity(0.9))
                 Spacer()
                 Text(format(value))
-                    .font(ModernDesignSystem.Typography.monospace)
+                    .font(.system(size: 14, weight: .medium, design: .monospaced))
                     .foregroundColor(color)
             }
-            
-            Slider(value: $value, in: range, step: step)
-                .accentColor(color)
+
+            Slider(value: $value, in: range, step: step) { editing in
+                if !editing {
+                    HapticManager.shared.exposureAdjusted()
+                }
+            }
+            .accentColor(color)
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .liquidGlass(intensity: .subtle, tint: color.opacity(0.15), interactive: false)
+        )
     }
 }
 
 // MARK: - Modern Bracketing Sequence
+
+@available(iOS 26.0, *)
 struct ModernBracketingSequence: View {
     let evStep: Float
-    
-    var body: some View {
-        HStack(spacing: ModernDesignSystem.Spacing.sm) {
-            // Underexposed shot
-            VStack(spacing: 2) {
-                Text("-\(Int(evStep))")
-                    .font(ModernDesignSystem.Typography.caption)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                Text("EV")
-                    .font(ModernDesignSystem.Typography.caption2)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
-            }
-            .frame(width: 40, height: 30)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(ModernDesignSystem.Colors.glassBackground)
-            )
-            
-            // Baseline shot
-            VStack(spacing: 2) {
-                Text("0")
-                    .font(ModernDesignSystem.Typography.caption)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraBackground)
-                Text("EV")
-                    .font(ModernDesignSystem.Typography.caption2)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraBackground)
-            }
-            .frame(width: 40, height: 30)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(ModernDesignSystem.Colors.warning)
-            )
-            
-            // Overexposed shot
-            VStack(spacing: 2) {
-                Text("+\(Int(evStep))")
-                    .font(ModernDesignSystem.Typography.caption)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                Text("EV")
-                    .font(ModernDesignSystem.Typography.caption2)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
-            }
-            .frame(width: 40, height: 30)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(ModernDesignSystem.Colors.glassBackground)
-            )
-        }
-        .padding(.vertical, ModernDesignSystem.Spacing.sm)
-    }
-}
+    let shotCount: Int
 
-// MARK: - Modern EV Control
-struct ModernEVControl: View {
-    @Binding var currentEV: Float
-    @Binding var isLocked: Bool
-    
     var body: some View {
-        HStack(spacing: ModernDesignSystem.Spacing.sm) {
-            Image(systemName: isLocked ? "lock.fill" : "lock.open")
-                .font(.system(size: 14))
-                .foregroundColor(isLocked ? ModernDesignSystem.Colors.error : ModernDesignSystem.Colors.cameraControl)
-            
-            Text(formatEV(currentEV))
-                .font(ModernDesignSystem.Typography.monospace)
-                .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                .frame(minWidth: 40)
-            
-            Spacer()
-            
-            // Fine control slider
-            Slider(value: $currentEV, in: -4.0...4.0, step: 0.1)
-                .accentColor(ModernDesignSystem.Colors.warning)
-                .frame(width: 120)
-        }
-        .padding(.horizontal, ModernDesignSystem.Spacing.md)
-        .padding(.vertical, ModernDesignSystem.Spacing.sm)
-        .background(
-            Capsule()
-                .fill(ModernDesignSystem.Colors.glassBackground)
-                .overlay(
-                    Capsule()
-                        .stroke(ModernDesignSystem.Colors.glassBorder, lineWidth: 1)
+        HStack(spacing: 8) {
+            ForEach(generateBracketSequence(), id: \.self) { ev in
+                VStack(spacing: 2) {
+                    Text(formatEV(ev))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(ev == 0 ? .black : .white)
+                    Text("EV")
+                        .font(.system(size: 9))
+                        .foregroundColor(ev == 0 ? .black.opacity(0.7) : .white.opacity(0.7))
+                }
+                .frame(width: 40, height: 30)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .liquidGlass(
+                            intensity: ev == 0 ? .prominent : .subtle,
+                            tint: ev == 0 ? .orange : .white.opacity(0.1),
+                            interactive: false
+                        )
                 )
-        )
-        .onTapGesture(count: 2) {
-            isLocked.toggle()
-            HapticManager.shared.gridTypeChanged()
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func generateBracketSequence() -> [Float] {
+        switch shotCount {
+        case 3:
+            return [-evStep, 0, +evStep]
+        case 5:
+            return [-2*evStep, -evStep, 0, +evStep, +2*evStep]
+        case 7:
+            return [-3*evStep, -2*evStep, -evStep, 0, +evStep, +2*evStep, +3*evStep]
+        default:
+            return [-evStep, 0, +evStep]
         }
     }
-    
+
     private func formatEV(_ value: Float) -> String {
         if value == 0 {
             return "0"
+        } else if value > 0 {
+            return "+\(Int(value))"
+        } else {
+            return "\(Int(value))"
         }
-        return String(format: "%+.1f", value)
     }
 }
