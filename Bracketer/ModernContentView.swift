@@ -7,7 +7,8 @@ import Photos
 
 struct ModernContentView: View {
     @StateObject private var camera = CameraController()
-    
+    @EnvironmentObject var orientationManager: OrientationManager
+
     // UI State
     @State private var showProControls = false
     @State private var showSettings = false
@@ -62,7 +63,7 @@ struct ModernContentView: View {
                     focusPeakingIntensity: focusPeakingIntensity
                 )
                 
-                // Top status bar (Apple Camera style)
+                // Top status bar (Apple Camera style) - buttons rotate with device
                 ModernTopBar(
                     camera: camera,
                     currentShootingMode: currentShootingMode,
@@ -75,12 +76,12 @@ struct ModernContentView: View {
                     onLevelToggle: toggleLevel,
                     onHistogramToggle: toggleHistogram
                 )
-                .rotationEffect(angleFor(camera.currentUIOrientation))
-                
-                // Bottom controls (Apple Camera style)
+                .alwaysUpright(orientationManager)
+
+                // Bottom controls (Apple Camera style) - buttons rotate with device
                 VStack {
                     Spacer()
-                    
+
                     ModernBottomControls(
                         camera: camera,
                         showProControls: $showProControls,
@@ -94,26 +95,28 @@ struct ModernContentView: View {
                         bracketShotCount: $bracketShotCount
                     )
                 }
-                .rotationEffect(angleFor(camera.currentUIOrientation))
+                .alwaysUpright(orientationManager)
                 
-                // Pro Controls Overlay
+                // Pro Controls Overlay - rotates with device
                 if showProControls {
-                    ModernProControls(
-                        camera: camera,
-                        showProControls: $showProControls,
-                        selectedEVStep: $selectedEVStep,
-                        currentEVCompensation: $currentEVCompensation,
-                        evCompensationLocked: $evCompensationLocked,
-                        focusPeakingEnabled: $focusPeakingEnabled,
-                        focusPeakingColor: $focusPeakingColor,
-                        focusPeakingIntensity: $focusPeakingIntensity,
-                        bracketShotCount: $bracketShotCount
-                    )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .rotationEffect(angleFor(camera.currentUIOrientation))
+                    if #available(iOS 26.0, *) {
+                        ModernProControls(
+                            camera: camera,
+                            showProControls: $showProControls,
+                            selectedEVStep: $selectedEVStep,
+                            currentEVCompensation: $currentEVCompensation,
+                            evCompensationLocked: $evCompensationLocked,
+                            focusPeakingEnabled: $focusPeakingEnabled,
+                            focusPeakingColor: $focusPeakingColor,
+                            focusPeakingIntensity: $focusPeakingIntensity,
+                            bracketShotCount: $bracketShotCount
+                        )
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .alwaysUpright(orientationManager)
+                    }
                 }
-                
-                // Settings Overlay
+
+                // Settings Overlay - rotates with device
                 if showSettings {
                     ModernSettingsPanel(
                         camera: camera,
@@ -127,7 +130,7 @@ struct ModernContentView: View {
                         focusPeakingIntensity: $focusPeakingIntensity
                     )
                     .transition(.move(edge: .trailing).combined(with: .opacity))
-                    .rotationEffect(angleFor(camera.currentUIOrientation))
+                    .alwaysUpright(orientationManager)
                 }
                 
                 // Loading and progress overlays
@@ -584,16 +587,6 @@ struct ModernCaptureProgress: View {
             .padding(ModernDesignSystem.Spacing.xl)
             .modernCardStyle(.overlay)
         }
-    }
-}
-
-private func angleFor(_ io: UIInterfaceOrientation) -> Angle {
-    switch io {
-    case .portrait: return .degrees(0)
-    case .landscapeLeft: return .degrees(90)
-    case .landscapeRight: return .degrees(-90)
-    case .portraitUpsideDown: return .degrees(180)
-    default: return .degrees(0)
     }
 }
 
