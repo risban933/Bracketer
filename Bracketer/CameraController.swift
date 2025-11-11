@@ -444,7 +444,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
     // MARK: - Apple Bracketing API Implementation
     private func captureBracketSequenceWithAPI(evOffsets: [Float], rawFormat: OSType) {
         // Create bracketed still image settings using Apple's API
-        let bracketSettings: [AVCapturePhotoBracketSettings] = evOffsets.map { evOffset in
+        let bracketSettings: [AVCaptureBracketedStillImageSettings] = evOffsets.map { evOffset in
             AVCaptureAutoExposureBracketedStillImageSettings.autoExposureSettings(exposureTargetBias: evOffset)
         }
 
@@ -458,7 +458,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         if #available(iOS 16.0, *), let dims = self.maxPhotoDims {
             photoSettings.maxPhotoDimensions = dims
         }
-        photoSettings.flashMode = .off
+        photoSettings.flashMode = AVCaptureDevice.FlashMode.off
         photoSettings.isAutoStillImageStabilizationEnabled = true
 
         // Store expected shot count for progress tracking
