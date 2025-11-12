@@ -779,9 +779,7 @@ struct ModernBottomControlsEnhanced: View {
                     isCapturing: camera.isCapturing,
                     progress: Double(camera.captureProgress) / Double(max(1, bracketShotCount))
                 ) {
-                    Task {
-                        await camera.captureLockdownBracket(evStep: selectedEVStep, shotCount: bracketShotCount)
-                    }
+                    camera.captureLockdownBracket(evStep: selectedEVStep, shotCount: bracketShotCount)
                 }
 
                 // Settings
