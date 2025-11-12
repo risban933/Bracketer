@@ -397,7 +397,7 @@ struct ModernTimerButton: View {
 struct ModernShootingModeIndicator: View {
     let mode: ShootingMode
     let onTap: () -> Void
-    
+
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: ModernDesignSystem.Spacing.xs) {
@@ -406,15 +406,16 @@ struct ModernShootingModeIndicator: View {
                 Text(mode.rawValue)
                     .font(ModernDesignSystem.Typography.caption)
             }
-            .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+            .foregroundColor(.white)
             .padding(.horizontal, ModernDesignSystem.Spacing.md)
             .padding(.vertical, ModernDesignSystem.Spacing.sm)
             .background(
                 Capsule()
-                    .fill(mode.color.opacity(0.2))
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.8)
                     .overlay(
                         Capsule()
-                            .stroke(mode.color.opacity(0.4), lineWidth: 1)
+                            .stroke(mode.color.opacity(0.6), lineWidth: 2)
                     )
             )
         }
@@ -424,7 +425,7 @@ struct ModernShootingModeIndicator: View {
 
 struct ModernBracketingIndicator: View {
     let evStep: Float
-    
+
     var body: some View {
         HStack(spacing: ModernDesignSystem.Spacing.xs) {
             Image(systemName: "rectangle.stack")
@@ -432,15 +433,16 @@ struct ModernBracketingIndicator: View {
             Text("±\(Int(evStep))")
                 .font(ModernDesignSystem.Typography.monospaceSmall)
         }
-        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+        .foregroundColor(.white)
         .padding(.horizontal, ModernDesignSystem.Spacing.md)
         .padding(.vertical, ModernDesignSystem.Spacing.sm)
         .background(
             Capsule()
-                .fill(ModernDesignSystem.Colors.warning.opacity(0.2))
+                .fill(.ultraThinMaterial)
+                .opacity(0.8)
                 .overlay(
                     Capsule()
-                        .stroke(ModernDesignSystem.Colors.warning.opacity(0.4), lineWidth: 1)
+                        .stroke(.yellow.opacity(0.6), lineWidth: 2)
                 )
         )
     }
