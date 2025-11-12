@@ -264,16 +264,16 @@ struct EnhancedShutterButton: View {
             action()
         } label: {
             ZStack {
-                // Outer ring with glass effect
+                // Outer ring with glass effect (increased size for better prominence)
                 Circle()
-                    .stroke(lineWidth: 4)
+                    .stroke(lineWidth: 5)
                     .foregroundColor(.white)
-                    .frame(width: 80, height: 80)
+                    .frame(width: 88, height: 88)
 
-                // Inner button with liquid glass
+                // Inner button with liquid glass (increased size)
                 Circle()
                     .fill(.white)
-                    .frame(width: 64, height: 64)
+                    .frame(width: 72, height: 72)
                     .scaleEffect(isPressed ? 0.85 : (isCapturing ? 0.9 : 1.0))
                     .overlay(
                         Circle()
@@ -285,7 +285,7 @@ struct EnhancedShutterButton: View {
                             .scaleEffect(0.95)
                     )
 
-                // Progress indicator
+                // Progress indicator (increased size)
                 if isCapturing {
                     Circle()
                         .trim(from: 0, to: progress)
@@ -296,15 +296,15 @@ struct EnhancedShutterButton: View {
                             ),
                             style: StrokeStyle(lineWidth: 6, lineCap: .round)
                         )
-                        .frame(width: 88, height: 88)
+                        .frame(width: 96, height: 96)
                         .rotationEffect(.degrees(-90))
                         .animation(.easeInOut(duration: 0.3), value: progress)
 
-                    // Pulsing effect during capture
+                    // Pulsing effect during capture (increased size)
                     Circle()
                         .stroke(lineWidth: 2)
                         .foregroundColor(.orange.opacity(0.5))
-                        .frame(width: 96, height: 96)
+                        .frame(width: 104, height: 104)
                         .scaleEffect(isCapturing ? 1.1 : 1.0)
                         .opacity(isCapturing ? 0.0 : 1.0)
                         .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isCapturing)

@@ -114,7 +114,13 @@ struct ModernContentView: View {
                             focusPeakingColor: $focusPeakingColor,
                             focusPeakingIntensity: $focusPeakingIntensity,
                             bracketShotCount: $bracketShotCount,
-                            selectedZoom: $selectedZoom
+                            selectedZoom: $selectedZoom,
+                            flashMode: $flashMode,
+                            timerMode: $timerMode,
+                            isGridActive: showGrid,
+                            isLevelActive: showLevel,
+                            onGridToggle: toggleGrid,
+                            onLevelToggle: toggleLevel
                         )
                     } else {
                         ModernBottomControls(
@@ -127,7 +133,13 @@ struct ModernContentView: View {
                             focusPeakingEnabled: $focusPeakingEnabled,
                             focusPeakingColor: $focusPeakingColor,
                             focusPeakingIntensity: $focusPeakingIntensity,
-                            bracketShotCount: $bracketShotCount
+                            bracketShotCount: $bracketShotCount,
+                            flashMode: $flashMode,
+                            timerMode: $timerMode,
+                            isGridActive: showGrid,
+                            isLevelActive: showLevel,
+                            onGridToggle: toggleGrid,
+                            onLevelToggle: toggleLevel
                         )
                     }
                 }
@@ -246,7 +258,7 @@ struct ModernCameraPreview: View {
     }
 }
 
-// MARK: - Modern Top Bar (Apple Camera Style)
+// MARK: - Modern Top Bar (Apple Camera Style - Status Only)
 struct ModernTopBar: View {
     let camera: CameraController
     let currentShootingMode: ShootingMode
@@ -259,15 +271,25 @@ struct ModernTopBar: View {
 
     var body: some View {
         HStack {
-            // Left side - Flash and timer
-            HStack(spacing: ModernDesignSystem.Spacing.md) {
-                ModernFlashButton()
-                ModernTimerButton()
+            // Left side - Status indicators only
+            HStack(spacing: ModernDesignSystem.Spacing.sm) {
+                if camera.isProRAWEnabled {
+                    Text("ProRAW")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.yellow)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(.ultraThinMaterial)
+                                .opacity(0.8)
+                        )
+                }
             }
 
             Spacer()
 
-            // Center - Mode indicator and bracketing
+            // Center - Mode indicator and bracketing (tappable for mode change)
             HStack(spacing: ModernDesignSystem.Spacing.sm) {
                 ModernShootingModeIndicator(mode: currentShootingMode, onTap: onModeChange)
                 ModernBracketingIndicator(evStep: selectedEVStep)
@@ -275,18 +297,9 @@ struct ModernTopBar: View {
 
             Spacer()
 
-            // Right side - Grid and level only
-            HStack(spacing: ModernDesignSystem.Spacing.md) {
-                ModernToggleButton(
-                    icon: "square.grid.3x3",
-                    isActive: isGridActive,
-                    onTap: onGridToggle
-                )
-                ModernToggleButton(
-                    icon: "level",
-                    isActive: isLevelActive,
-                    onTap: onLevelToggle
-                )
+            // Right side - Keep minimal for balance
+            HStack(spacing: ModernDesignSystem.Spacing.sm) {
+                // Reserved for status indicators (battery, storage warnings, etc.)
             }
         }
         .padding(.horizontal, 16)
@@ -308,30 +321,46 @@ struct ModernBottomControls: View {
     @Binding var focusPeakingColor: Color
     @Binding var focusPeakingIntensity: Float
     @Binding var bracketShotCount: Int
-    
-    var body: some View {
-        VStack(spacing: ModernDesignSystem.Spacing.lg) {
-            // EV Compensation and Pro Controls
-            HStack {
-                Spacer()
+    @Binding var flashMode: FlashMode
+    @Binding var timerMode: TimerMode
+    @Binding var isGridActive: Bool
+    @Binding var isLevelActive: Bool
+    let onGridToggle: () -> Void
+    let onLevelToggle: () -> Void
 
+    var body: some View {
+        VStack(spacing: ModernDesignSystem.Spacing.md) {
+            // Secondary controls row (moved from top bar)
+            HStack(spacing: 16) {
+                ModernFlashButton(flashMode: $flashMode)
+                ModernTimerButton(timerMode: $timerMode)
+                ModernToggleButton(
+                    icon: "square.grid.3x3",
+                    isActive: isGridActive,
+                    onTap: onGridToggle
+                )
+                ModernToggleButton(
+                    icon: "level",
+                    isActive: isLevelActive,
+                    onTap: onLevelToggle
+                )
                 ModernProControlButton(showProControls: $showProControls)
             }
             .padding(.horizontal, ModernDesignSystem.Spacing.lg)
-            
+
             // Main control row
             HStack(spacing: ModernDesignSystem.Spacing.xl) {
                 // Photo library
                 ModernPhotoLibraryButton()
-                
-                // Shutter button
+
+                // Shutter button (larger for better prominence)
                 ModernShutterButton(
                     isCapturing: camera.isCapturing,
                     progress: camera.captureProgress
                 ) {
                     camera.captureLockdownBracket(evStep: selectedEVStep, shotCount: bracketShotCount)
                 }
-                
+
                 // Settings
                 ModernSettingsButton(showSettings: $showSettings)
             }
@@ -344,9 +373,14 @@ struct ModernBottomControls: View {
 // MARK: - Modern Components
 
 struct ModernFlashButton: View {
+    @Binding var flashMode: FlashMode
+
     var body: some View {
         Button {
-            // Flash toggle
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                flashMode = flashMode.next()
+            }
+            HapticManager.shared.exposureAdjusted()
         } label: {
             ZStack {
                 Circle()
@@ -355,12 +389,12 @@ struct ModernFlashButton: View {
                     .frame(width: 44, height: 44)
                     .overlay(
                         Circle()
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                            .stroke(flashMode != .off ? .yellow.opacity(0.6) : .white.opacity(0.2), lineWidth: flashMode != .off ? 2 : 1)
                     )
 
-                Image(systemName: "bolt.slash.fill")
+                Image(systemName: flashMode.iconName)
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(flashMode != .off ? .yellow : .white)
             }
         }
         .buttonStyle(.plain)
@@ -368,9 +402,14 @@ struct ModernFlashButton: View {
 }
 
 struct ModernTimerButton: View {
+    @Binding var timerMode: TimerMode
+
     var body: some View {
         Button {
-            // Timer toggle
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                timerMode = timerMode.next()
+            }
+            HapticManager.shared.exposureAdjusted()
         } label: {
             ZStack {
                 Circle()
@@ -379,12 +418,18 @@ struct ModernTimerButton: View {
                     .frame(width: 44, height: 44)
                     .overlay(
                         Circle()
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
+                            .stroke(timerMode != .off ? .orange.opacity(0.6) : .white.opacity(0.2), lineWidth: timerMode != .off ? 2 : 1)
                     )
 
-                Image(systemName: "timer")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white)
+                if timerMode == .off {
+                    Image(systemName: "timer")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.white)
+                } else {
+                    Text("\(timerMode.seconds)")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.orange)
+                }
             }
         }
         .buttonStyle(.plain)
@@ -536,16 +581,16 @@ struct ModernShutterButton: View {
             action()
         } label: {
             ZStack {
-                // Outer ring with glass effect
+                // Outer ring with glass effect (increased size)
                 Circle()
-                    .stroke(.white, lineWidth: 4)
-                    .frame(width: 80, height: 80)
+                    .stroke(.white, lineWidth: 5)
+                    .frame(width: 88, height: 88)
 
-                // Inner button with liquid glass
+                // Inner button with liquid glass (increased size)
                 Circle()
                     .fill(.ultraThinMaterial)
                     .opacity(0.9)
-                    .frame(width: 64, height: 64)
+                    .frame(width: 72, height: 72)
                     .overlay(
                         Circle()
                             .fill(isCapturing ? .red.opacity(0.3) : .white.opacity(0.2))
@@ -553,12 +598,18 @@ struct ModernShutterButton: View {
                     .scaleEffect(isCapturing ? 0.9 : 1.0)
                     .animation(ModernDesignSystem.Animations.spring, value: isCapturing)
 
-                // Progress ring
+                // Progress ring (increased size)
                 if isCapturing {
                     Circle()
                         .trim(from: 0, to: CGFloat(progress) / 4.0)
-                        .stroke(.yellow, lineWidth: 4)
-                        .frame(width: 88, height: 88)
+                        .stroke(
+                            AngularGradient(
+                                colors: [.yellow, .orange, .yellow],
+                                center: .center
+                            ),
+                            lineWidth: 5
+                        )
+                        .frame(width: 96, height: 96)
                         .rotationEffect(.degrees(-90))
                 }
             }
@@ -714,15 +765,24 @@ struct ModernTopBarEnhanced: View {
 
     var body: some View {
         HStack {
-            // Left side - Flash and timer only
-            HStack(spacing: 12) {
-                FlashModeControl(flashMode: $flashMode)
-                TimerModeControl(timerMode: $timerMode)
+            // Left side - Status indicators only
+            HStack(spacing: 8) {
+                if camera.isProRAWEnabled {
+                    Text("ProRAW")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.yellow)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .liquidGlass(intensity: .subtle, tint: .yellow.opacity(0.2))
+                        )
+                }
             }
 
             Spacer()
 
-            // Center - Mode indicator and bracketing
+            // Center - Mode indicator and bracketing (tappable for mode change)
             HStack(spacing: 8) {
                 ModernShootingModeIndicator(mode: currentShootingMode, onTap: onModeChange)
                 ModernBracketingIndicator(evStep: selectedEVStep)
@@ -730,18 +790,9 @@ struct ModernTopBarEnhanced: View {
 
             Spacer()
 
-            // Right side - Grid and level only
-            HStack(spacing: 12) {
-                ModernToggleButton(
-                    icon: "square.grid.3x3",
-                    isActive: isGridActive,
-                    onTap: onGridToggle
-                )
-                ModernToggleButton(
-                    icon: "level",
-                    isActive: isLevelActive,
-                    onTap: onLevelToggle
-                )
+            // Right side - Keep minimal for balance
+            HStack(spacing: 8) {
+                // Reserved for status indicators (battery, storage warnings, etc.)
             }
         }
         .padding(.horizontal, 16)
@@ -766,15 +817,39 @@ struct ModernBottomControlsEnhanced: View {
     @Binding var focusPeakingIntensity: Float
     @Binding var bracketShotCount: Int
     @Binding var selectedZoom: CameraZoomLevel
+    @Binding var flashMode: FlashMode
+    @Binding var timerMode: TimerMode
+    @Binding var isGridActive: Bool
+    @Binding var isLevelActive: Bool
+    let onGridToggle: () -> Void
+    let onLevelToggle: () -> Void
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
+            // Secondary controls row (moved from top bar) - all in thumb reach
+            HStack(spacing: 16) {
+                FlashModeControl(flashMode: $flashMode)
+                TimerModeControl(timerMode: $timerMode)
+                ModernToggleButton(
+                    icon: "square.grid.3x3",
+                    isActive: isGridActive,
+                    onTap: onGridToggle
+                )
+                ModernToggleButton(
+                    icon: "level",
+                    isActive: isLevelActive,
+                    onTap: onLevelToggle
+                )
+                ModernProControlButton(showProControls: $showProControls)
+            }
+            .padding(.horizontal, 20)
+
             // Main control row with enhanced shutter button
             HStack(spacing: 40) {
                 // Photo library
                 ModernPhotoLibraryButton()
 
-                // Enhanced shutter button
+                // Enhanced shutter button (larger size)
                 EnhancedShutterButton(
                     isCapturing: camera.isCapturing,
                     progress: Double(camera.captureProgress) / Double(max(1, bracketShotCount))
@@ -784,13 +859,6 @@ struct ModernBottomControlsEnhanced: View {
 
                 // Settings
                 ModernSettingsButton(showSettings: $showSettings)
-            }
-            .padding(.horizontal, 20)
-
-            // Pro Controls button
-            HStack {
-                Spacer()
-                ModernProControlButton(showProControls: $showProControls)
             }
             .padding(.horizontal, 20)
 
