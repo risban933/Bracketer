@@ -101,9 +101,9 @@ final class MotionLevelManager: NSObject, ObservableObject {
     
     /// Get attitude relative to reference
     func getRelativeAttitude() -> CMAttitude? {
-        guard let current = currentAttitude,
+        guard let current = currentAttitude?.copy() as? CMAttitude,
               let reference = referenceAttitude else { return nil }
-        
+
         current.multiply(byInverseOf: reference)
         return current
     }

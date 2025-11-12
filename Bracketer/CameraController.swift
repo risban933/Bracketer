@@ -148,6 +148,8 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         main {
             self.updateUIOrientationFromScene()
             self.isInitializing = false
+            // Invalidate existing timer before creating a new one to prevent leaks
+            self.exposureUpdateTimer?.invalidate()
             self.exposureUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
                 self.updateExposureUI()
             }
@@ -485,7 +487,12 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
     private func settleAutoExposure(timeout: TimeInterval = Constants.aeSettleMaxWait, poll: TimeInterval = Constants.aeSettlePollInterval, threshold: Float = Constants.aeOffsetThreshold, completion: @escaping () -> Void) {
         let start = CACurrentMediaTime()
         func check() {
-            if let off = self.device?.exposureTargetOffset, abs(off) <= threshold {
+            // Safely unwrap self and device to prevent crashes if deallocated
+            guard let device = self.device else {
+                completion()
+                return
+            }
+            if let off = device.exposureTargetOffset, abs(off) <= threshold {
                 completion()
                 return
             }
@@ -493,11 +500,21 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                 completion() // timeout, proceed with best effort
                 return
             }
-            self.sessionQueue.asyncAfter(deadline: .now() + poll) {
+            self.sessionQueue.asyncAfter(deadline: .now() + poll) { [weak self] in
+                guard let self = self else {
+                    completion()
+                    return
+                }
                 check()
             }
         }
-        self.sessionQueue.async { check() }
+        self.sessionQueue.async { [weak self] in
+            guard let self = self else {
+                completion()
+                return
+            }
+            check()
+        }
     }
 
 
@@ -516,7 +533,9 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                 }
                 dev.setExposureTargetBias(0, completionHandler: nil)
                 dev.unlockForConfiguration()
-            } catch {}
+            } catch {
+                Logger.camera("Failed to restore auto modes after capture: \(error.localizedDescription)")
+            }
         }
 
         self.plannedEVs.removeAll()
@@ -689,6 +708,7 @@ enum PhotoSaver {
         let filename = bracketLabel != nil ? "Bracket-\(bracketLabel!)-\(timestamp).dng" : "Bracket-\(timestamp).dng"
 
         var assetIdentifier: String?
+        let semaphore = DispatchSemaphore(value: 0)
 
         PHPhotoLibrary.shared().performChanges({
             let req = PHAssetCreationRequest.forAsset()
@@ -700,10 +720,13 @@ enum PhotoSaver {
             assetIdentifier = req.placeholderForCreatedAsset?.localIdentifier
         }, completionHandler: { success, error in
             if !success {
-                print("Failed to save photo: \(error?.localizedDescription ?? "Unknown error")")
+                Logger.photo("Failed to save photo: \(error?.localizedDescription ?? "Unknown error")")
             }
+            semaphore.signal()
         })
 
+        // Wait for the async operation to complete (with timeout)
+        _ = semaphore.wait(timeout: .now() + 5.0)
         return assetIdentifier
     }
 }
