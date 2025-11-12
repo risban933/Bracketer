@@ -411,14 +411,24 @@ struct ModernFlashButton: View {
             HapticManager.shared.exposureAdjusted()
         } label: {
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Circle()
-                            .stroke(flashMode != .off ? .yellow.opacity(0.6) : .white.opacity(0.2), lineWidth: flashMode != .off ? 2 : 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    Circle()
+                        .liquidGlass(
+                            intensity: .regular,
+                            tint: flashMode != .off ? .yellow.opacity(0.3) : nil,
+                            interactive: true
+                        )
+                        .frame(width: 44, height: 44)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(flashMode != .off ? .yellow.opacity(0.6) : .white.opacity(0.2), lineWidth: flashMode != .off ? 2 : 1)
+                        )
+                }
 
                 Image(systemName: flashMode.iconName)
                     .font(.system(size: 18, weight: .medium))
@@ -440,14 +450,24 @@ struct ModernTimerButton: View {
             HapticManager.shared.exposureAdjusted()
         } label: {
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Circle()
-                            .stroke(timerMode != .off ? .orange.opacity(0.6) : .white.opacity(0.2), lineWidth: timerMode != .off ? 2 : 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    Circle()
+                        .liquidGlass(
+                            intensity: .regular,
+                            tint: timerMode != .off ? .orange.opacity(0.3) : nil,
+                            interactive: true
+                        )
+                        .frame(width: 44, height: 44)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(timerMode != .off ? .orange.opacity(0.6) : .white.opacity(0.2), lineWidth: timerMode != .off ? 2 : 1)
+                        )
+                }
 
                 if timerMode == .off {
                     Image(systemName: "timer")
@@ -492,13 +512,20 @@ struct ModernShootingModeIndicator: View {
             .padding(.horizontal, ModernDesignSystem.Spacing.md)
             .padding(.vertical, ModernDesignSystem.Spacing.sm)
             .background(
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .overlay(
+                Group {
+                    if #available(iOS 26.0, *) {
                         Capsule()
-                            .stroke(mode.color.opacity(0.6), lineWidth: 2)
-                    )
+                            .liquidGlass(intensity: .regular, tint: mode.color.opacity(0.3), interactive: true)
+                    } else {
+                        Capsule()
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.8)
+                            .overlay(
+                                Capsule()
+                                    .stroke(mode.color.opacity(0.6), lineWidth: 2)
+                            )
+                    }
+                }
             )
         }
         .buttonStyle(.plain)
@@ -519,13 +546,20 @@ struct ModernBracketingIndicator: View {
         .padding(.horizontal, ModernDesignSystem.Spacing.md)
         .padding(.vertical, ModernDesignSystem.Spacing.sm)
         .background(
-            Capsule()
-                .fill(.ultraThinMaterial)
-                .opacity(0.8)
-                .overlay(
+            Group {
+                if #available(iOS 26.0, *) {
                     Capsule()
-                        .stroke(.yellow.opacity(0.6), lineWidth: 2)
-                )
+                        .liquidGlass(intensity: .regular, tint: .yellow.opacity(0.3), interactive: false)
+                } else {
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .overlay(
+                            Capsule()
+                                .stroke(.yellow.opacity(0.6), lineWidth: 2)
+                        )
+                }
+            }
         )
     }
 }
@@ -538,14 +572,24 @@ struct ModernToggleButton: View {
     var body: some View {
         Button(action: onTap) {
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Circle()
-                            .stroke(isActive ? .yellow.opacity(0.6) : .white.opacity(0.2), lineWidth: isActive ? 2 : 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    Circle()
+                        .liquidGlass(
+                            intensity: isActive ? .prominent : .regular,
+                            tint: isActive ? .yellow.opacity(0.3) : nil,
+                            interactive: true
+                        )
+                        .frame(width: 44, height: 44)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(isActive ? .yellow.opacity(0.6) : .white.opacity(0.2), lineWidth: isActive ? 2 : 1)
+                        )
+                }
 
                 Image(systemName: icon)
                     .font(.system(size: 18, weight: .medium))
@@ -568,14 +612,24 @@ struct ModernProControlButton: View {
             HapticManager.shared.panelToggled()
         } label: {
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Circle()
-                            .stroke(showProControls ? .purple.opacity(0.6) : .white.opacity(0.2), lineWidth: showProControls ? 2 : 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    Circle()
+                        .liquidGlass(
+                            intensity: showProControls ? .prominent : .regular,
+                            tint: showProControls ? .purple.opacity(0.3) : nil,
+                            interactive: true
+                        )
+                        .frame(width: 44, height: 44)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(showProControls ? .purple.opacity(0.6) : .white.opacity(0.2), lineWidth: showProControls ? 2 : 1)
+                        )
+                }
 
                 Image(systemName: "dial.min")
                     .font(.system(size: 18, weight: .medium))
@@ -592,14 +646,20 @@ struct ModernPhotoLibraryButton: View {
             // Photo library
         } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    RoundedRectangle(cornerRadius: 10)
+                        .liquidGlass(intensity: .regular, tint: nil, interactive: true)
+                        .frame(width: 44, height: 44)
+                } else {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(.white.opacity(0.2), lineWidth: 1)
+                        )
+                }
 
                 Image(systemName: "photo")
                     .font(.system(size: 18, weight: .medium))
@@ -671,14 +731,24 @@ struct ModernSettingsButton: View {
             HapticManager.shared.panelToggled()
         } label: {
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Circle()
-                            .stroke(showSettings ? .blue.opacity(0.6) : .white.opacity(0.2), lineWidth: showSettings ? 2 : 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    Circle()
+                        .liquidGlass(
+                            intensity: showSettings ? .prominent : .regular,
+                            tint: showSettings ? .blue.opacity(0.3) : nil,
+                            interactive: true
+                        )
+                        .frame(width: 44, height: 44)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(showSettings ? .blue.opacity(0.6) : .white.opacity(0.2), lineWidth: showSettings ? 2 : 1)
+                        )
+                }
 
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 18, weight: .medium))
