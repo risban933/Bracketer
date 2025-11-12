@@ -28,6 +28,8 @@ struct ModernContentView: View {
     // Shooting modes
     @State private var currentShootingMode: ShootingMode = .auto
     @State private var gridType: GridType = .ruleOfThirds
+    @State private var showModeChangeToast = false
+    @State private var previousMode: ShootingMode = .auto
 
     // Camera controls (iOS 26+)
     @State private var selectedZoom: CameraZoomLevel = .wide
@@ -103,7 +105,7 @@ struct ModernContentView: View {
                     Spacer()
 
                     if #available(iOS 26.0, *) {
-                        ModernBottomControlsEnhanced(
+                        ContextualBottomControls(
                             camera: camera,
                             showProControls: $showProControls,
                             showSettings: $showSettings,
@@ -119,11 +121,12 @@ struct ModernContentView: View {
                             timerMode: $timerMode,
                             isGridActive: showGrid,
                             isLevelActive: showLevel,
+                            currentShootingMode: $currentShootingMode,
                             onGridToggle: toggleGrid,
                             onLevelToggle: toggleLevel
                         )
                     } else {
-                        ModernBottomControls(
+                        ContextualBottomControlsLegacy(
                             camera: camera,
                             showProControls: $showProControls,
                             showSettings: $showSettings,
@@ -138,6 +141,7 @@ struct ModernContentView: View {
                             timerMode: $timerMode,
                             isGridActive: showGrid,
                             isLevelActive: showLevel,
+                            currentShootingMode: $currentShootingMode,
                             onGridToggle: toggleGrid,
                             onLevelToggle: toggleLevel
                         )
@@ -184,16 +188,40 @@ struct ModernContentView: View {
                 if camera.isInitializing {
                     ModernLoadingOverlay()
                 }
-                
+
                 if camera.isCapturing {
                     ModernCaptureProgress(
                         progress: camera.captureProgress,
                         evStep: selectedEVStep
                     )
                 }
+
+                // Mode change toast notification
+                if showModeChangeToast {
+                    VStack {
+                        ModeChangeToast(mode: currentShootingMode)
+                            .padding(.top, 80)
+                        Spacer()
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(100)
+                }
             }
         }
         .ignoresSafeArea()
+        .onChange(of: currentShootingMode) { oldValue, newValue in
+            if oldValue != newValue {
+                showModeChangeToast = true
+                HapticManager.shared.gridTypeChanged()
+
+                // Auto-hide toast after 2 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showModeChangeToast = false
+                    }
+                }
+            }
+        }
         .task {
             if isCompatibleDevice {
                 await camera.start()
@@ -440,8 +468,20 @@ struct ModernShootingModeIndicator: View {
     let mode: ShootingMode
     let onTap: () -> Void
 
+    private var modeHint: String {
+        switch mode {
+        case .auto: return "Tap for Manual"
+        case .manual: return "Tap for Portrait"
+        case .portrait: return "Tap for Night"
+        case .night: return "Tap for Auto"
+        }
+    }
+
     var body: some View {
-        Button(action: onTap) {
+        Button(action: {
+            onTap()
+            HapticManager.shared.gridTypeChanged()
+        }) {
             HStack(spacing: ModernDesignSystem.Spacing.xs) {
                 Image(systemName: mode.icon)
                     .font(ModernDesignSystem.Typography.caption)
