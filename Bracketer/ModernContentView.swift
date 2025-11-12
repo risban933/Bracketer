@@ -66,33 +66,36 @@ struct ModernContentView: View {
                     focusPeakingIntensity: focusPeakingIntensity
                 )
                 
-                // Top status bar (Apple Camera style) - buttons rotate with device
-                if #available(iOS 26.0, *) {
-                    ModernTopBarEnhanced(
-                        camera: camera,
-                        currentShootingMode: currentShootingMode,
-                        selectedEVStep: selectedEVStep,
-                        flashMode: $flashMode,
-                        timerMode: $timerMode,
-                        isGridActive: showGrid,
-                        isLevelActive: showLevel,
-                        onModeChange: cycleShootingMode,
-                        onGridToggle: toggleGrid,
-                        onLevelToggle: toggleLevel
-                    )
-                    .alwaysUpright(orientationManager)
-                } else {
-                    ModernTopBar(
-                        camera: camera,
-                        currentShootingMode: currentShootingMode,
-                        selectedEVStep: selectedEVStep,
-                        isGridActive: showGrid,
-                        isLevelActive: showLevel,
-                        onModeChange: cycleShootingMode,
-                        onGridToggle: toggleGrid,
-                        onLevelToggle: toggleLevel
-                    )
-                    .alwaysUpright(orientationManager)
+                // Top status bar (Apple Camera style) - pinned to top edge
+                VStack {
+                    if #available(iOS 26.0, *) {
+                        ModernTopBarEnhanced(
+                            camera: camera,
+                            currentShootingMode: currentShootingMode,
+                            selectedEVStep: selectedEVStep,
+                            flashMode: $flashMode,
+                            timerMode: $timerMode,
+                            isGridActive: showGrid,
+                            isLevelActive: showLevel,
+                            onModeChange: cycleShootingMode,
+                            onGridToggle: toggleGrid,
+                            onLevelToggle: toggleLevel
+                        )
+                        .alwaysUpright(orientationManager)
+                    } else {
+                        ModernTopBar(
+                            camera: camera,
+                            currentShootingMode: currentShootingMode,
+                            selectedEVStep: selectedEVStep,
+                            isGridActive: showGrid,
+                            isLevelActive: showLevel,
+                            onModeChange: cycleShootingMode,
+                            onGridToggle: toggleGrid,
+                            onLevelToggle: toggleLevel
+                        )
+                        .alwaysUpright(orientationManager)
+                    }
+                    Spacer()
                 }
 
                 // Bottom controls (Apple Camera style) - buttons rotate with device
@@ -255,44 +258,40 @@ struct ModernTopBar: View {
     let onLevelToggle: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                // Left side - Flash and timer
-                HStack(spacing: ModernDesignSystem.Spacing.md) {
-                    ModernFlashButton()
-                    ModernTimerButton()
-                }
-
-                Spacer()
-
-                // Center - Mode indicator and bracketing
-                HStack(spacing: ModernDesignSystem.Spacing.sm) {
-                    ModernShootingModeIndicator(mode: currentShootingMode, onTap: onModeChange)
-                    ModernBracketingIndicator(evStep: selectedEVStep)
-                }
-
-                Spacer()
-
-                // Right side - Grid and level only
-                HStack(spacing: ModernDesignSystem.Spacing.md) {
-                    ModernToggleButton(
-                        icon: "square.grid.3x3",
-                        isActive: isGridActive,
-                        onTap: onGridToggle
-                    )
-                    ModernToggleButton(
-                        icon: "level",
-                        isActive: isLevelActive,
-                        onTap: onLevelToggle
-                    )
-                }
+        HStack {
+            // Left side - Flash and timer
+            HStack(spacing: ModernDesignSystem.Spacing.md) {
+                ModernFlashButton()
+                ModernTimerButton()
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
 
             Spacer()
+
+            // Center - Mode indicator and bracketing
+            HStack(spacing: ModernDesignSystem.Spacing.sm) {
+                ModernShootingModeIndicator(mode: currentShootingMode, onTap: onModeChange)
+                ModernBracketingIndicator(evStep: selectedEVStep)
+            }
+
+            Spacer()
+
+            // Right side - Grid and level only
+            HStack(spacing: ModernDesignSystem.Spacing.md) {
+                ModernToggleButton(
+                    icon: "square.grid.3x3",
+                    isActive: isGridActive,
+                    onTap: onGridToggle
+                )
+                ModernToggleButton(
+                    icon: "level",
+                    isActive: isLevelActive,
+                    onTap: onLevelToggle
+                )
+            }
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
         .background(.ultraThinMaterial.opacity(0.95))
     }
 }
@@ -714,44 +713,40 @@ struct ModernTopBarEnhanced: View {
     let onLevelToggle: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                // Left side - Flash and timer only
-                HStack(spacing: 12) {
-                    FlashModeControl(flashMode: $flashMode)
-                    TimerModeControl(timerMode: $timerMode)
-                }
-
-                Spacer()
-
-                // Center - Mode indicator and bracketing
-                HStack(spacing: 8) {
-                    ModernShootingModeIndicator(mode: currentShootingMode, onTap: onModeChange)
-                    ModernBracketingIndicator(evStep: selectedEVStep)
-                }
-
-                Spacer()
-
-                // Right side - Grid and level only
-                HStack(spacing: 12) {
-                    ModernToggleButton(
-                        icon: "square.grid.3x3",
-                        isActive: isGridActive,
-                        onTap: onGridToggle
-                    )
-                    ModernToggleButton(
-                        icon: "level",
-                        isActive: isLevelActive,
-                        onTap: onLevelToggle
-                    )
-                }
+        HStack {
+            // Left side - Flash and timer only
+            HStack(spacing: 12) {
+                FlashModeControl(flashMode: $flashMode)
+                TimerModeControl(timerMode: $timerMode)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
 
             Spacer()
+
+            // Center - Mode indicator and bracketing
+            HStack(spacing: 8) {
+                ModernShootingModeIndicator(mode: currentShootingMode, onTap: onModeChange)
+                ModernBracketingIndicator(evStep: selectedEVStep)
+            }
+
+            Spacer()
+
+            // Right side - Grid and level only
+            HStack(spacing: 12) {
+                ModernToggleButton(
+                    icon: "square.grid.3x3",
+                    isActive: isGridActive,
+                    onTap: onGridToggle
+                )
+                ModernToggleButton(
+                    icon: "level",
+                    isActive: isLevelActive,
+                    onTap: onLevelToggle
+                )
+            }
         }
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 12)
         .background(.ultraThinMaterial.opacity(0.95))
     }
 }
