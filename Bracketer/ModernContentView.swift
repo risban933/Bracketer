@@ -99,15 +99,6 @@ struct ModernContentView: View {
                 VStack {
                     Spacer()
 
-                    // Zoom selector above bottom controls
-                    if #available(iOS 26.0, *) {
-                        CameraZoomControl(
-                            selectedZoom: $selectedZoom,
-                            availableZoomLevels: CameraZoomLevel.iPhone17ProMaxLevels
-                        )
-                        .padding(.bottom, ModernDesignSystem.Spacing.md)
-                    }
-
                     if #available(iOS 26.0, *) {
                         ModernBottomControlsEnhanced(
                             camera: camera,
@@ -119,7 +110,8 @@ struct ModernContentView: View {
                             focusPeakingEnabled: $focusPeakingEnabled,
                             focusPeakingColor: $focusPeakingColor,
                             focusPeakingIntensity: $focusPeakingIntensity,
-                            bracketShotCount: $bracketShotCount
+                            bracketShotCount: $bracketShotCount,
+                            selectedZoom: $selectedZoom
                         )
                     } else {
                         ModernBottomControls(
@@ -532,33 +524,37 @@ struct ModernShutterButton: View {
     let isCapturing: Bool
     let progress: Int
     let action: () -> Void
-    
+
     var body: some View {
         Button {
             HapticManager.shared.shutterPressed()
             action()
         } label: {
             ZStack {
-                // Outer ring
+                // Outer ring with glass effect
                 Circle()
-                    .stroke(ModernDesignSystem.Colors.cameraControl, lineWidth: 4)
+                    .stroke(.white, lineWidth: 4)
                     .frame(width: 80, height: 80)
-                
-                // Inner button
+
+                // Inner button with liquid glass
                 Circle()
-                    .fill(isCapturing ? ModernDesignSystem.Colors.error : ModernDesignSystem.Colors.cameraControl)
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.9)
                     .frame(width: 64, height: 64)
+                    .overlay(
+                        Circle()
+                            .fill(isCapturing ? .red.opacity(0.3) : .white.opacity(0.2))
+                    )
                     .scaleEffect(isCapturing ? 0.9 : 1.0)
                     .animation(ModernDesignSystem.Animations.spring, value: isCapturing)
-                
+
                 // Progress ring
                 if isCapturing {
-                    iOSProgressRing(
-                        progress: CGFloat(progress) / 4.0,
-                        lineWidth: 4,
-                        color: ModernDesignSystem.Colors.cameraControlActive
-                    )
-                    .frame(width: 88, height: 88)
+                    Circle()
+                        .trim(from: 0, to: CGFloat(progress) / 4.0)
+                        .stroke(.yellow, lineWidth: 4)
+                        .frame(width: 88, height: 88)
+                        .rotationEffect(.degrees(-90))
                 }
             }
         }
@@ -762,9 +758,16 @@ struct ModernBottomControlsEnhanced: View {
     @Binding var focusPeakingColor: Color
     @Binding var focusPeakingIntensity: Float
     @Binding var bracketShotCount: Int
+    @Binding var selectedZoom: CameraZoomLevel
 
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
+            // Zoom selector integrated at bottom
+            CameraZoomControl(
+                selectedZoom: $selectedZoom,
+                availableZoomLevels: CameraZoomLevel.iPhone17ProMaxLevels
+            )
+
             // EV Compensation and Pro Controls
             HStack {
                 Spacer()
