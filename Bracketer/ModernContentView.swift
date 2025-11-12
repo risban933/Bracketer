@@ -28,6 +28,8 @@ struct ModernContentView: View {
     // Shooting modes
     @State private var currentShootingMode: ShootingMode = .auto
     @State private var gridType: GridType = .ruleOfThirds
+    @State private var showModeChangeToast = false
+    @State private var previousMode: ShootingMode = .auto
 
     // Camera controls (iOS 26+)
     @State private var selectedZoom: CameraZoomLevel = .wide
@@ -103,7 +105,7 @@ struct ModernContentView: View {
                     Spacer()
 
                     if #available(iOS 26.0, *) {
-                        ModernBottomControlsEnhanced(
+                        ContextualBottomControls(
                             camera: camera,
                             showProControls: $showProControls,
                             showSettings: $showSettings,
@@ -114,10 +116,17 @@ struct ModernContentView: View {
                             focusPeakingColor: $focusPeakingColor,
                             focusPeakingIntensity: $focusPeakingIntensity,
                             bracketShotCount: $bracketShotCount,
-                            selectedZoom: $selectedZoom
+                            selectedZoom: $selectedZoom,
+                            flashMode: $flashMode,
+                            timerMode: $timerMode,
+                            isGridActive: showGrid,
+                            isLevelActive: showLevel,
+                            currentShootingMode: $currentShootingMode,
+                            onGridToggle: toggleGrid,
+                            onLevelToggle: toggleLevel
                         )
                     } else {
-                        ModernBottomControls(
+                        ContextualBottomControlsLegacy(
                             camera: camera,
                             showProControls: $showProControls,
                             showSettings: $showSettings,
@@ -127,7 +136,14 @@ struct ModernContentView: View {
                             focusPeakingEnabled: $focusPeakingEnabled,
                             focusPeakingColor: $focusPeakingColor,
                             focusPeakingIntensity: $focusPeakingIntensity,
-                            bracketShotCount: $bracketShotCount
+                            bracketShotCount: $bracketShotCount,
+                            flashMode: $flashMode,
+                            timerMode: $timerMode,
+                            isGridActive: showGrid,
+                            isLevelActive: showLevel,
+                            currentShootingMode: $currentShootingMode,
+                            onGridToggle: toggleGrid,
+                            onLevelToggle: toggleLevel
                         )
                     }
                 }
@@ -152,7 +168,7 @@ struct ModernContentView: View {
                     }
                 }
 
-                // Settings Overlay - rotates with device
+                // Settings Overlay - slides up from bottom (iOS style bottom sheet)
                 if showSettings {
                     ModernSettingsPanel(
                         camera: camera,
@@ -164,7 +180,7 @@ struct ModernContentView: View {
                         focusPeakingColor: $focusPeakingColor,
                         focusPeakingIntensity: $focusPeakingIntensity
                     )
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                     .alwaysUpright(orientationManager)
                 }
                 
@@ -172,16 +188,40 @@ struct ModernContentView: View {
                 if camera.isInitializing {
                     ModernLoadingOverlay()
                 }
-                
+
                 if camera.isCapturing {
                     ModernCaptureProgress(
                         progress: camera.captureProgress,
                         evStep: selectedEVStep
                     )
                 }
+
+                // Mode change toast notification
+                if showModeChangeToast {
+                    VStack {
+                        ModeChangeToast(mode: currentShootingMode)
+                            .padding(.top, 80)
+                        Spacer()
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(100)
+                }
             }
         }
         .ignoresSafeArea()
+        .onChange(of: currentShootingMode) { oldValue, newValue in
+            if oldValue != newValue {
+                showModeChangeToast = true
+                HapticManager.shared.gridTypeChanged()
+
+                // Auto-hide toast after 2 seconds
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showModeChangeToast = false
+                    }
+                }
+            }
+        }
         .task {
             if isCompatibleDevice {
                 await camera.start()
@@ -246,7 +286,7 @@ struct ModernCameraPreview: View {
     }
 }
 
-// MARK: - Modern Top Bar (Apple Camera Style)
+// MARK: - Modern Top Bar (Apple Camera Style - Status Only)
 struct ModernTopBar: View {
     let camera: CameraController
     let currentShootingMode: ShootingMode
@@ -259,15 +299,25 @@ struct ModernTopBar: View {
 
     var body: some View {
         HStack {
-            // Left side - Flash and timer
-            HStack(spacing: ModernDesignSystem.Spacing.md) {
-                ModernFlashButton()
-                ModernTimerButton()
+            // Left side - Status indicators only
+            HStack(spacing: ModernDesignSystem.Spacing.sm) {
+                if camera.isProRAWEnabled {
+                    Text("ProRAW")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.yellow)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(.ultraThinMaterial)
+                                .opacity(0.8)
+                        )
+                }
             }
 
             Spacer()
 
-            // Center - Mode indicator and bracketing
+            // Center - Mode indicator and bracketing (tappable for mode change)
             HStack(spacing: ModernDesignSystem.Spacing.sm) {
                 ModernShootingModeIndicator(mode: currentShootingMode, onTap: onModeChange)
                 ModernBracketingIndicator(evStep: selectedEVStep)
@@ -275,18 +325,9 @@ struct ModernTopBar: View {
 
             Spacer()
 
-            // Right side - Grid and level only
-            HStack(spacing: ModernDesignSystem.Spacing.md) {
-                ModernToggleButton(
-                    icon: "square.grid.3x3",
-                    isActive: isGridActive,
-                    onTap: onGridToggle
-                )
-                ModernToggleButton(
-                    icon: "level",
-                    isActive: isLevelActive,
-                    onTap: onLevelToggle
-                )
+            // Right side - Keep minimal for balance
+            HStack(spacing: ModernDesignSystem.Spacing.sm) {
+                // Reserved for status indicators (battery, storage warnings, etc.)
             }
         }
         .padding(.horizontal, 16)
@@ -308,30 +349,46 @@ struct ModernBottomControls: View {
     @Binding var focusPeakingColor: Color
     @Binding var focusPeakingIntensity: Float
     @Binding var bracketShotCount: Int
-    
-    var body: some View {
-        VStack(spacing: ModernDesignSystem.Spacing.lg) {
-            // EV Compensation and Pro Controls
-            HStack {
-                Spacer()
+    @Binding var flashMode: FlashMode
+    @Binding var timerMode: TimerMode
+    @Binding var isGridActive: Bool
+    @Binding var isLevelActive: Bool
+    let onGridToggle: () -> Void
+    let onLevelToggle: () -> Void
 
+    var body: some View {
+        VStack(spacing: ModernDesignSystem.Spacing.md) {
+            // Secondary controls row (moved from top bar)
+            HStack(spacing: 16) {
+                ModernFlashButton(flashMode: $flashMode)
+                ModernTimerButton(timerMode: $timerMode)
+                ModernToggleButton(
+                    icon: "square.grid.3x3",
+                    isActive: isGridActive,
+                    onTap: onGridToggle
+                )
+                ModernToggleButton(
+                    icon: "level",
+                    isActive: isLevelActive,
+                    onTap: onLevelToggle
+                )
                 ModernProControlButton(showProControls: $showProControls)
             }
             .padding(.horizontal, ModernDesignSystem.Spacing.lg)
-            
+
             // Main control row
             HStack(spacing: ModernDesignSystem.Spacing.xl) {
                 // Photo library
                 ModernPhotoLibraryButton()
-                
-                // Shutter button
+
+                // Shutter button (larger for better prominence)
                 ModernShutterButton(
                     isCapturing: camera.isCapturing,
                     progress: camera.captureProgress
                 ) {
                     camera.captureLockdownBracket(evStep: selectedEVStep, shotCount: bracketShotCount)
                 }
-                
+
                 // Settings
                 ModernSettingsButton(showSettings: $showSettings)
             }
@@ -344,23 +401,38 @@ struct ModernBottomControls: View {
 // MARK: - Modern Components
 
 struct ModernFlashButton: View {
+    @Binding var flashMode: FlashMode
+
     var body: some View {
         Button {
-            // Flash toggle
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                flashMode = flashMode.next()
+            }
+            HapticManager.shared.exposureAdjusted()
         } label: {
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Circle()
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    Circle()
+                        .liquidGlass(
+                            intensity: .regular,
+                            tint: flashMode != .off ? .yellow.opacity(0.3) : nil,
+                            interactive: true
+                        )
+                        .frame(width: 44, height: 44)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(flashMode != .off ? .yellow.opacity(0.6) : .white.opacity(0.2), lineWidth: flashMode != .off ? 2 : 1)
+                        )
+                }
 
-                Image(systemName: "bolt.slash.fill")
+                Image(systemName: flashMode.iconName)
                     .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(flashMode != .off ? .yellow : .white)
             }
         }
         .buttonStyle(.plain)
@@ -368,23 +440,44 @@ struct ModernFlashButton: View {
 }
 
 struct ModernTimerButton: View {
+    @Binding var timerMode: TimerMode
+
     var body: some View {
         Button {
-            // Timer toggle
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                timerMode = timerMode.next()
+            }
+            HapticManager.shared.exposureAdjusted()
         } label: {
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Circle()
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    Circle()
+                        .liquidGlass(
+                            intensity: .regular,
+                            tint: timerMode != .off ? .orange.opacity(0.3) : nil,
+                            interactive: true
+                        )
+                        .frame(width: 44, height: 44)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(timerMode != .off ? .orange.opacity(0.6) : .white.opacity(0.2), lineWidth: timerMode != .off ? 2 : 1)
+                        )
+                }
 
-                Image(systemName: "timer")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white)
+                if timerMode == .off {
+                    Image(systemName: "timer")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(.white)
+                } else {
+                    Text("\(timerMode.seconds)")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.orange)
+                }
             }
         }
         .buttonStyle(.plain)
@@ -395,8 +488,20 @@ struct ModernShootingModeIndicator: View {
     let mode: ShootingMode
     let onTap: () -> Void
 
+    private var modeHint: String {
+        switch mode {
+        case .auto: return "Tap for Manual"
+        case .manual: return "Tap for Portrait"
+        case .portrait: return "Tap for Night"
+        case .night: return "Tap for Auto"
+        }
+    }
+
     var body: some View {
-        Button(action: onTap) {
+        Button(action: {
+            onTap()
+            HapticManager.shared.gridTypeChanged()
+        }) {
             HStack(spacing: ModernDesignSystem.Spacing.xs) {
                 Image(systemName: mode.icon)
                     .font(ModernDesignSystem.Typography.caption)
@@ -407,13 +512,20 @@ struct ModernShootingModeIndicator: View {
             .padding(.horizontal, ModernDesignSystem.Spacing.md)
             .padding(.vertical, ModernDesignSystem.Spacing.sm)
             .background(
-                Capsule()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .overlay(
+                Group {
+                    if #available(iOS 26.0, *) {
                         Capsule()
-                            .stroke(mode.color.opacity(0.6), lineWidth: 2)
-                    )
+                            .liquidGlass(intensity: .regular, tint: mode.color.opacity(0.3), interactive: true)
+                    } else {
+                        Capsule()
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.8)
+                            .overlay(
+                                Capsule()
+                                    .stroke(mode.color.opacity(0.6), lineWidth: 2)
+                            )
+                    }
+                }
             )
         }
         .buttonStyle(.plain)
@@ -434,13 +546,20 @@ struct ModernBracketingIndicator: View {
         .padding(.horizontal, ModernDesignSystem.Spacing.md)
         .padding(.vertical, ModernDesignSystem.Spacing.sm)
         .background(
-            Capsule()
-                .fill(.ultraThinMaterial)
-                .opacity(0.8)
-                .overlay(
+            Group {
+                if #available(iOS 26.0, *) {
                     Capsule()
-                        .stroke(.yellow.opacity(0.6), lineWidth: 2)
-                )
+                        .liquidGlass(intensity: .regular, tint: .yellow.opacity(0.3), interactive: false)
+                } else {
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .overlay(
+                            Capsule()
+                                .stroke(.yellow.opacity(0.6), lineWidth: 2)
+                        )
+                }
+            }
         )
     }
 }
@@ -453,14 +572,24 @@ struct ModernToggleButton: View {
     var body: some View {
         Button(action: onTap) {
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Circle()
-                            .stroke(isActive ? .yellow.opacity(0.6) : .white.opacity(0.2), lineWidth: isActive ? 2 : 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    Circle()
+                        .liquidGlass(
+                            intensity: isActive ? .prominent : .regular,
+                            tint: isActive ? .yellow.opacity(0.3) : nil,
+                            interactive: true
+                        )
+                        .frame(width: 44, height: 44)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(isActive ? .yellow.opacity(0.6) : .white.opacity(0.2), lineWidth: isActive ? 2 : 1)
+                        )
+                }
 
                 Image(systemName: icon)
                     .font(.system(size: 18, weight: .medium))
@@ -483,14 +612,24 @@ struct ModernProControlButton: View {
             HapticManager.shared.panelToggled()
         } label: {
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Circle()
-                            .stroke(showProControls ? .purple.opacity(0.6) : .white.opacity(0.2), lineWidth: showProControls ? 2 : 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    Circle()
+                        .liquidGlass(
+                            intensity: showProControls ? .prominent : .regular,
+                            tint: showProControls ? .purple.opacity(0.3) : nil,
+                            interactive: true
+                        )
+                        .frame(width: 44, height: 44)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(showProControls ? .purple.opacity(0.6) : .white.opacity(0.2), lineWidth: showProControls ? 2 : 1)
+                        )
+                }
 
                 Image(systemName: "dial.min")
                     .font(.system(size: 18, weight: .medium))
@@ -507,14 +646,20 @@ struct ModernPhotoLibraryButton: View {
             // Photo library
         } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    RoundedRectangle(cornerRadius: 10)
+                        .liquidGlass(intensity: .regular, tint: nil, interactive: true)
+                        .frame(width: 44, height: 44)
+                } else {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(.white.opacity(0.2), lineWidth: 1)
+                        )
+                }
 
                 Image(systemName: "photo")
                     .font(.system(size: 18, weight: .medium))
@@ -536,16 +681,16 @@ struct ModernShutterButton: View {
             action()
         } label: {
             ZStack {
-                // Outer ring with glass effect
+                // Outer ring with glass effect (increased size)
                 Circle()
-                    .stroke(.white, lineWidth: 4)
-                    .frame(width: 80, height: 80)
+                    .stroke(.white, lineWidth: 5)
+                    .frame(width: 88, height: 88)
 
-                // Inner button with liquid glass
+                // Inner button with liquid glass (increased size)
                 Circle()
                     .fill(.ultraThinMaterial)
                     .opacity(0.9)
-                    .frame(width: 64, height: 64)
+                    .frame(width: 72, height: 72)
                     .overlay(
                         Circle()
                             .fill(isCapturing ? .red.opacity(0.3) : .white.opacity(0.2))
@@ -553,12 +698,18 @@ struct ModernShutterButton: View {
                     .scaleEffect(isCapturing ? 0.9 : 1.0)
                     .animation(ModernDesignSystem.Animations.spring, value: isCapturing)
 
-                // Progress ring
+                // Progress ring (increased size)
                 if isCapturing {
                     Circle()
                         .trim(from: 0, to: CGFloat(progress) / 4.0)
-                        .stroke(.yellow, lineWidth: 4)
-                        .frame(width: 88, height: 88)
+                        .stroke(
+                            AngularGradient(
+                                colors: [.yellow, .orange, .yellow],
+                                center: .center
+                            ),
+                            lineWidth: 5
+                        )
+                        .frame(width: 96, height: 96)
                         .rotationEffect(.degrees(-90))
                 }
             }
@@ -580,14 +731,24 @@ struct ModernSettingsButton: View {
             HapticManager.shared.panelToggled()
         } label: {
             ZStack {
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .opacity(0.8)
-                    .frame(width: 44, height: 44)
-                    .overlay(
-                        Circle()
-                            .stroke(showSettings ? .blue.opacity(0.6) : .white.opacity(0.2), lineWidth: showSettings ? 2 : 1)
-                    )
+                if #available(iOS 26.0, *) {
+                    Circle()
+                        .liquidGlass(
+                            intensity: showSettings ? .prominent : .regular,
+                            tint: showSettings ? .blue.opacity(0.3) : nil,
+                            interactive: true
+                        )
+                        .frame(width: 44, height: 44)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .opacity(0.8)
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Circle()
+                                .stroke(showSettings ? .blue.opacity(0.6) : .white.opacity(0.2), lineWidth: showSettings ? 2 : 1)
+                        )
+                }
 
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 18, weight: .medium))
@@ -714,15 +875,24 @@ struct ModernTopBarEnhanced: View {
 
     var body: some View {
         HStack {
-            // Left side - Flash and timer only
-            HStack(spacing: 12) {
-                FlashModeControl(flashMode: $flashMode)
-                TimerModeControl(timerMode: $timerMode)
+            // Left side - Status indicators only
+            HStack(spacing: 8) {
+                if camera.isProRAWEnabled {
+                    Text("ProRAW")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.yellow)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .liquidGlass(intensity: .subtle, tint: .yellow.opacity(0.2))
+                        )
+                }
             }
 
             Spacer()
 
-            // Center - Mode indicator and bracketing
+            // Center - Mode indicator and bracketing (tappable for mode change)
             HStack(spacing: 8) {
                 ModernShootingModeIndicator(mode: currentShootingMode, onTap: onModeChange)
                 ModernBracketingIndicator(evStep: selectedEVStep)
@@ -730,18 +900,9 @@ struct ModernTopBarEnhanced: View {
 
             Spacer()
 
-            // Right side - Grid and level only
-            HStack(spacing: 12) {
-                ModernToggleButton(
-                    icon: "square.grid.3x3",
-                    isActive: isGridActive,
-                    onTap: onGridToggle
-                )
-                ModernToggleButton(
-                    icon: "level",
-                    isActive: isLevelActive,
-                    onTap: onLevelToggle
-                )
+            // Right side - Keep minimal for balance
+            HStack(spacing: 8) {
+                // Reserved for status indicators (battery, storage warnings, etc.)
             }
         }
         .padding(.horizontal, 16)
@@ -766,15 +927,39 @@ struct ModernBottomControlsEnhanced: View {
     @Binding var focusPeakingIntensity: Float
     @Binding var bracketShotCount: Int
     @Binding var selectedZoom: CameraZoomLevel
+    @Binding var flashMode: FlashMode
+    @Binding var timerMode: TimerMode
+    @Binding var isGridActive: Bool
+    @Binding var isLevelActive: Bool
+    let onGridToggle: () -> Void
+    let onLevelToggle: () -> Void
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
+            // Secondary controls row (moved from top bar) - all in thumb reach
+            HStack(spacing: 16) {
+                FlashModeControl(flashMode: $flashMode)
+                TimerModeControl(timerMode: $timerMode)
+                ModernToggleButton(
+                    icon: "square.grid.3x3",
+                    isActive: isGridActive,
+                    onTap: onGridToggle
+                )
+                ModernToggleButton(
+                    icon: "level",
+                    isActive: isLevelActive,
+                    onTap: onLevelToggle
+                )
+                ModernProControlButton(showProControls: $showProControls)
+            }
+            .padding(.horizontal, 20)
+
             // Main control row with enhanced shutter button
             HStack(spacing: 40) {
                 // Photo library
                 ModernPhotoLibraryButton()
 
-                // Enhanced shutter button
+                // Enhanced shutter button (larger size)
                 EnhancedShutterButton(
                     isCapturing: camera.isCapturing,
                     progress: Double(camera.captureProgress) / Double(max(1, bracketShotCount))
@@ -784,13 +969,6 @@ struct ModernBottomControlsEnhanced: View {
 
                 // Settings
                 ModernSettingsButton(showSettings: $showSettings)
-            }
-            .padding(.horizontal, 20)
-
-            // Pro Controls button
-            HStack {
-                Spacer()
-                ModernProControlButton(showProControls: $showProControls)
             }
             .padding(.horizontal, 20)
 
