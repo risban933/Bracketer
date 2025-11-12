@@ -164,7 +164,7 @@ struct ModernContentView: View {
                     }
                 }
 
-                // Settings Overlay - rotates with device
+                // Settings Overlay - slides up from bottom (iOS style bottom sheet)
                 if showSettings {
                     ModernSettingsPanel(
                         camera: camera,
@@ -176,7 +176,7 @@ struct ModernContentView: View {
                         focusPeakingColor: $focusPeakingColor,
                         focusPeakingIntensity: $focusPeakingIntensity
                     )
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                     .alwaysUpright(orientationManager)
                 }
                 
