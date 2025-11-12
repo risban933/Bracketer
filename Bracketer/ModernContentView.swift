@@ -761,21 +761,7 @@ struct ModernBottomControlsEnhanced: View {
     @Binding var selectedZoom: CameraZoomLevel
 
     var body: some View {
-        VStack(spacing: 16) {
-            // Zoom selector integrated at bottom
-            CameraZoomControl(
-                selectedZoom: $selectedZoom,
-                availableZoomLevels: CameraZoomLevel.iPhone17ProMaxLevels
-            )
-
-            // EV Compensation and Pro Controls
-            HStack {
-                Spacer()
-
-                ModernProControlButton(showProControls: $showProControls)
-            }
-            .padding(.horizontal, 20)
-
+        VStack(spacing: 8) {
             // Main control row with enhanced shutter button
             HStack(spacing: 40) {
                 // Photo library
@@ -795,6 +781,19 @@ struct ModernBottomControlsEnhanced: View {
                 ModernSettingsButton(showSettings: $showSettings)
             }
             .padding(.horizontal, 20)
+
+            // Pro Controls button
+            HStack {
+                Spacer()
+                ModernProControlButton(showProControls: $showProControls)
+            }
+            .padding(.horizontal, 20)
+
+            // Zoom selector at very bottom
+            CameraZoomControl(
+                selectedZoom: $selectedZoom,
+                availableZoomLevels: CameraZoomLevel.iPhone17ProMaxLevels
+            )
             .padding(.bottom, 20)
         }
     }
