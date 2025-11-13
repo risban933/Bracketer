@@ -38,6 +38,9 @@ struct ModernContentView: View {
 
     // Focus peaking colors
     private let focusPeakingColors: [Color] = [.red, .blue, .yellow, .green, .orange, .purple, .white]
+
+    // Cancellable task for toast auto-hide
+    @State private var toastHideTask: DispatchWorkItem?
     
     var body: some View {
         GeometryReader { geometry in
@@ -214,12 +217,17 @@ struct ModernContentView: View {
                 showModeChangeToast = true
                 HapticManager.shared.gridTypeChanged()
 
-                // Auto-hide toast after 2 seconds
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                // Cancel any existing toast hide task to prevent overlapping animations
+                toastHideTask?.cancel()
+
+                // Auto-hide toast after 2 seconds using cancellable task
+                let task = DispatchWorkItem {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         showModeChangeToast = false
                     }
                 }
+                toastHideTask = task
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
             }
         }
         .task {

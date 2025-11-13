@@ -1,5 +1,4 @@
 import SwiftUI
-import SwiftUI
 import AVFoundation
 
 private enum Constants {
@@ -243,6 +242,10 @@ struct CameraPreviewLayerView: UIViewRepresentable {
     let session: AVCaptureSession
     var onLayerReady: ((AVCaptureVideoPreviewLayer) -> Void)?
 
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
     func makeUIView(context: Context) -> PreviewView {
         let v = PreviewView()
         v.videoPreviewLayer.session = session
@@ -251,14 +254,8 @@ struct CameraPreviewLayerView: UIViewRepresentable {
         // Set up orientation handling
         updateOrientation(for: v.videoPreviewLayer)
 
-        // Start observing orientation changes
-        NotificationCenter.default.addObserver(
-            forName: UIDevice.orientationDidChangeNotification,
-            object: nil,
-            queue: .main
-        ) { _ in
-            updateOrientation(for: v.videoPreviewLayer)
-        }
+        // Start observing orientation changes via coordinator to prevent memory leaks
+        context.coordinator.setupOrientationObserver(for: v.videoPreviewLayer)
 
         if let c = v.videoPreviewLayer.connection, c.isVideoMirroringSupported {
             c.automaticallyAdjustsVideoMirroring = false
@@ -272,6 +269,10 @@ struct CameraPreviewLayerView: UIViewRepresentable {
     func updateUIView(_ uiView: PreviewView, context: Context) {
         uiView.videoPreviewLayer.videoGravity = .resizeAspectFill
         updateOrientation(for: uiView.videoPreviewLayer)
+    }
+
+    static func dismantleUIView(_ uiView: PreviewView, coordinator: Coordinator) {
+        coordinator.removeOrientationObserver()
     }
 
     private func updateOrientation(for previewLayer: AVCaptureVideoPreviewLayer) {
@@ -296,6 +297,37 @@ struct CameraPreviewLayerView: UIViewRepresentable {
 
         // iOS 17+ uses videoRotationAngle instead of deprecated videoOrientation
         connection.videoRotationAngle = rotationAngle
+    }
+
+    class Coordinator {
+        let parent: CameraPreviewLayerView
+        private var orientationObserver: NSObjectProtocol?
+
+        init(parent: CameraPreviewLayerView) {
+            self.parent = parent
+        }
+
+        func setupOrientationObserver(for previewLayer: AVCaptureVideoPreviewLayer) {
+            orientationObserver = NotificationCenter.default.addObserver(
+                forName: UIDevice.orientationDidChangeNotification,
+                object: nil,
+                queue: .main
+            ) { [weak previewLayer] _ in
+                guard let previewLayer = previewLayer else { return }
+                self.parent.updateOrientation(for: previewLayer)
+            }
+        }
+
+        func removeOrientationObserver() {
+            if let observer = orientationObserver {
+                NotificationCenter.default.removeObserver(observer)
+                orientationObserver = nil
+            }
+        }
+
+        deinit {
+            removeOrientationObserver()
+        }
     }
 }
 
