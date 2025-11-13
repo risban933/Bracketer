@@ -285,7 +285,8 @@ struct ContextualBottomControlsLegacy: View {
 
                 ModernShutterButton(
                     isCapturing: camera.isCapturing,
-                    progress: camera.captureProgress
+                    progress: camera.captureProgress,
+                    totalSteps: bracketShotCount
                 ) {
                     camera.captureLockdownBracket(evStep: selectedEVStep, shotCount: bracketShotCount)
                 }
