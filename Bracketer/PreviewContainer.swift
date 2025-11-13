@@ -58,14 +58,15 @@ struct PreviewContainer: View {
 
     var body: some View {
         GeometryReader { geo in
+            let previewAspect: CGFloat = orientation.isPortrait ? 3.0 / 4.0 : 4.0 / 3.0
+
             ZStack {
                 // Background to fill the screen behind the 4:3 preview
                 Color.black.ignoresSafeArea()
 
-                // Centered camera preview with overlays
+                // Centered camera preview with overlays, constrained to the preview bounds
                 ZStack {
                     CameraPreviewLayerView(session: session, onLayerReady: onLayerReady)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipped()
 
                     if showGrid {
@@ -103,7 +104,9 @@ struct PreviewContainer: View {
                             .allowsHitTesting(false)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .aspectRatio(previewAspect, contentMode: .fit)
+                .frame(maxWidth: geo.size.width, maxHeight: geo.size.height)
+                .clipped()
             }
         }
     }

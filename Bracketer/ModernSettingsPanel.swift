@@ -15,6 +15,60 @@ struct ModernSettingsPanel: View {
     @Binding var focusPeakingIntensity: Float
 
     private let focusPeakingColors: [Color] = [.red, .blue, .yellow, .green, .orange, .purple, .white]
+    @State private var selectedCategory: SettingsCategory = .viewfinder
+
+    private var quickPresetData: [SettingsPresetButtonData] {
+        [
+            SettingsPresetButtonData(
+                title: "Landscape",
+                subtitle: "Balanced outdoor look",
+                icon: "mountain.2.fill",
+                tint: .blue.opacity(0.6)
+            ) {
+                showGrid = true
+                gridType = .goldenRatio
+                showLevel = true
+                focusPeakingEnabled = false
+                focusPeakingIntensity = 0.4
+            },
+            SettingsPresetButtonData(
+                title: "Portrait",
+                subtitle: "Mid grid, warm peaking",
+                icon: "person.crop.square",
+                tint: .pink.opacity(0.7)
+            ) {
+                showGrid = true
+                gridType = .centerCrosshair
+                showLevel = false
+                focusPeakingEnabled = true
+                focusPeakingColor = .orange
+                focusPeakingIntensity = 0.65
+            },
+            SettingsPresetButtonData(
+                title: "Studio",
+                subtitle: "Minimal UI, strong peaking",
+                icon: "sparkles",
+                tint: .purple.opacity(0.6)
+            ) {
+                showGrid = false
+                showLevel = false
+                focusPeakingEnabled = true
+                focusPeakingColor = .green
+                focusPeakingIntensity = 0.85
+            },
+            SettingsPresetButtonData(
+                title: "Tripod",
+                subtitle: "Precise leveling + grid",
+                icon: "level",
+                tint: .teal.opacity(0.6)
+            ) {
+                showGrid = true
+                gridType = .ruleOfThirds
+                showLevel = true
+                focusPeakingEnabled = false
+            }
+        ]
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -32,7 +86,7 @@ struct ModernSettingsPanel: View {
                 VStack(spacing: 0) {
                     Spacer()
 
-                    VStack(spacing: ModernDesignSystem.Spacing.lg) {
+                    VStack(spacing: ModernDesignSystem.Spacing.md) {
                         // Drag handle (iOS style)
                         RoundedRectangle(cornerRadius: 2.5)
                             .fill(ModernDesignSystem.Colors.cameraControlSecondary)
@@ -41,9 +95,14 @@ struct ModernSettingsPanel: View {
 
                         // Header
                         HStack {
-                            Text("Settings")
-                                .font(ModernDesignSystem.Typography.title2)
-                                .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Settings")
+                                    .font(ModernDesignSystem.Typography.title2)
+                                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                                Text(selectedCategory.subtitle)
+                                    .font(ModernDesignSystem.Typography.caption)
+                                    .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                            }
 
                             Spacer()
 
@@ -59,40 +118,51 @@ struct ModernSettingsPanel: View {
                             }
                         }
                         .padding(.horizontal, ModernDesignSystem.Spacing.lg)
-                        .padding(.top, ModernDesignSystem.Spacing.sm)
+
+                        Picker("Category", selection: $selectedCategory) {
+                            ForEach(SettingsCategory.allCases) { category in
+                                Text(category.title)
+                                    .tag(category)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, ModernDesignSystem.Spacing.lg)
 
                         // Settings sections
                         ScrollView {
                             VStack(spacing: ModernDesignSystem.Spacing.lg) {
-                                // Viewfinder settings
-                                ModernViewfinderSettings(
-                                    showGrid: $showGrid,
-                                    gridType: $gridType,
-                                    showLevel: $showLevel
-                                )
+                                ModernQuickPresetCard(presets: quickPresetData)
 
-                                // Focus settings
-                                ModernFocusSettings(
-                                    focusPeakingEnabled: $focusPeakingEnabled,
-                                    focusPeakingColor: $focusPeakingColor,
-                                    focusPeakingIntensity: $focusPeakingIntensity,
-                                    focusPeakingColors: focusPeakingColors
-                                )
-
-                                // Camera settings
-                                ModernCameraSettings(
-                                    teleUses12MP: $camera.teleUses12MP,
-                                    selectedCamera: camera.selectedCamera
-                                )
-
-                                // About section
-                                ModernAboutSection()
+                                Group {
+                                    switch selectedCategory {
+                                    case .viewfinder:
+                                        ModernViewfinderSettings(
+                                            showGrid: $showGrid,
+                                            gridType: $gridType,
+                                            showLevel: $showLevel
+                                        )
+                                    case .focus:
+                                        ModernFocusSettings(
+                                            focusPeakingEnabled: $focusPeakingEnabled,
+                                            focusPeakingColor: $focusPeakingColor,
+                                            focusPeakingIntensity: $focusPeakingIntensity,
+                                            focusPeakingColors: focusPeakingColors
+                                        )
+                                    case .capture:
+                                        ModernCameraSettings(
+                                            teleUses12MP: $camera.teleUses12MP,
+                                            selectedCamera: camera.selectedCamera
+                                        )
+                                    case .about:
+                                        ModernAboutSection()
+                                    }
+                                }
                             }
                             .padding(.horizontal, ModernDesignSystem.Spacing.lg)
                             .padding(.bottom, ModernDesignSystem.Spacing.xl)
                         }
                     }
-                    .frame(maxHeight: geometry.size.height * 0.7)
+                    .frame(maxHeight: geometry.size.height * 0.75)
                     .background(
                         RoundedRectangle(cornerRadius: 20, style: .continuous)
                             .fill(.ultraThinMaterial)
@@ -117,66 +187,44 @@ struct ModernViewfinderSettings: View {
     @Binding var showLevel: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: ModernDesignSystem.Spacing.md) {
-            // Section header with enhanced styling
-            HStack(spacing: 8) {
-                Image(systemName: "viewfinder")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(ModernDesignSystem.Colors.professional)
-                Text("VIEWFINDER")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
-                    .tracking(0.5)
+        ModernSettingsCard(
+            title: "Viewfinder",
+            subtitle: "Composition tools",
+            icon: "viewfinder"
+        ) {
+            ModernToggleRow(
+                icon: "square.grid.3x3",
+                title: "Grid Overlay",
+                subtitle: "Show guides on the preview",
+                tint: ModernDesignSystem.Colors.professional,
+                isOn: $showGrid
+            )
+
+            if showGrid {
+                ModernDropdownPicker(
+                    title: "Grid Style",
+                    icon: "square.grid.3x3",
+                    options: GridType.allCases,
+                    selection: $gridType,
+                    labelProvider: { $0.rawValue }
+                )
+                .padding(.top, ModernDesignSystem.Spacing.sm)
+
+                GridTypePreview(gridType: gridType)
+                    .frame(height: 110)
+                    .transition(.opacity.combined(with: .scale))
             }
-            .padding(.bottom, 4)
 
-            VStack(spacing: 0) {
-                // Grid settings (3x3 only)
-                HStack {
-                    Image(systemName: "square.grid.3x3")
-                        .font(.system(size: 18))
-                        .foregroundColor(ModernDesignSystem.Colors.professional)
-                        .frame(width: 24)
-                    Text("Grid Overlay")
-                        .font(ModernDesignSystem.Typography.body)
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                    Spacer()
-                    Toggle("", isOn: $showGrid)
-                        .labelsHidden()
-                        .tint(ModernDesignSystem.Colors.professional)
-                }
-                .padding(.vertical, 12)
+            Divider()
+                .background(Color.white.opacity(0.08))
 
-                Divider()
-                    .background(ModernDesignSystem.Colors.cameraControlSecondary.opacity(0.2))
-
-                // Level indicator
-                HStack {
-                    Image(systemName: "level")
-                        .font(.system(size: 18))
-                        .foregroundColor(ModernDesignSystem.Colors.warning)
-                        .frame(width: 24)
-                    Text("Level Indicator")
-                        .font(ModernDesignSystem.Typography.body)
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                    Spacer()
-                    Toggle("", isOn: $showLevel)
-                        .labelsHidden()
-                        .tint(ModernDesignSystem.Colors.warning)
-                }
-                .padding(.vertical, 12)
-            }
-        }
-        .padding(16)
-        .modernCardStyle(.glass)
-    }
-    
-    private func gridTypeLabel(_ type: GridType) -> String {
-        switch type {
-        case .ruleOfThirds: return "3×3"
-        case .goldenRatio: return "Golden"
-        case .goldenSpiral: return "Spiral"
-        case .centerCrosshair: return "Cross"
+            ModernToggleRow(
+                icon: "level",
+                title: "Level Indicator",
+                subtitle: "Keep horizons perfectly straight",
+                tint: ModernDesignSystem.Colors.warning,
+                isOn: $showLevel
+            )
         }
     }
 }
@@ -189,85 +237,27 @@ struct ModernFocusSettings: View {
     let focusPeakingColors: [Color]
     
     var body: some View {
-        VStack(spacing: ModernDesignSystem.Spacing.lg) {
-            // Section header
-            HStack {
-                Image(systemName: "eye")
-                    .foregroundColor(ModernDesignSystem.Colors.success)
-                Text("Focus")
-                    .font(ModernDesignSystem.Typography.bodyBold)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                Spacer()
-            }
-            
-            // Focus Peaking toggle
-            HStack {
-                Image(systemName: "eye")
-                    .foregroundColor(ModernDesignSystem.Colors.success)
-                Text("Focus Peaking")
-                    .font(ModernDesignSystem.Typography.body)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                Spacer()
-                Toggle("", isOn: $focusPeakingEnabled)
-                    .labelsHidden()
-                    .tint(ModernDesignSystem.Colors.success)
-            }
-            
-            // Focus Peaking controls
+        ModernSettingsCard(
+            title: "Focus & Peaking",
+            subtitle: "Manual assist options",
+            icon: "eye"
+        ) {
+            ModernToggleRow(
+                icon: "viewfinder.circle",
+                title: "Focus Peaking",
+                subtitle: "Highlight crisp edges",
+                tint: ModernDesignSystem.Colors.success,
+                isOn: $focusPeakingEnabled
+            )
+
             if focusPeakingEnabled {
-                VStack(spacing: ModernDesignSystem.Spacing.md) {
-                    // Color selection
-                    VStack(alignment: .leading, spacing: ModernDesignSystem.Spacing.sm) {
-                        Text("Peaking Color")
-                            .font(ModernDesignSystem.Typography.caption)
-                            .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
-                        
-                        HStack(spacing: ModernDesignSystem.Spacing.md) {
-                            ForEach(focusPeakingColors, id: \.self) { color in
-                                Button {
-                                    focusPeakingColor = color
-                                } label: {
-                                    Circle()
-                                        .fill(color.opacity(0.3))
-                                        .frame(width: 32, height: 32)
-                                        .overlay(
-                                            Circle()
-                                                .stroke(color, lineWidth: focusPeakingColor == color ? 2 : 1)
-                                        )
-                                        .overlay(
-                                            Group {
-                                                if focusPeakingColor == color {
-                                                    Image(systemName: "checkmark")
-                                                        .font(.system(size: 12, weight: .bold))
-                                                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                                                }
-                                            }
-                                        )
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                    
-                    // Intensity control
-                    VStack(spacing: ModernDesignSystem.Spacing.sm) {
-                        HStack {
-                            Text("Intensity")
-                                .font(ModernDesignSystem.Typography.body)
-                                .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                            Spacer()
-                            Text("\(Int(focusPeakingIntensity * 100))%")
-                                .font(ModernDesignSystem.Typography.monospace)
-                                .foregroundColor(ModernDesignSystem.Colors.success)
-                        }
-                        
-                        Slider(value: $focusPeakingIntensity, in: 0.1...1.0, step: 0.1)
-                            .accentColor(ModernDesignSystem.Colors.success)
-                    }
-                }
+                FocusPeakingColorPicker(
+                    selectedColor: $focusPeakingColor,
+                    colors: focusPeakingColors
+                )
+                FocusPeakingIntensitySlider(intensity: $focusPeakingIntensity)
             }
         }
-        .modernCardStyle(.glass)
     }
 }
 
@@ -277,115 +267,72 @@ struct ModernCameraSettings: View {
     let selectedCamera: CameraKind
 
     var body: some View {
-        VStack(alignment: .leading, spacing: ModernDesignSystem.Spacing.md) {
-            // Section header with enhanced styling
-            HStack(spacing: 8) {
-                Image(systemName: "camera")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControlActive)
-                Text("CAMERA")
-                    .font(.system(size: 13, weight: .semibold))
+        ModernSettingsCard(
+            title: "Capture",
+            subtitle: "Formats & hardware",
+            icon: "camera.aperture"
+        ) {
+            ModernSettingBadgeGrid(badges: [
+                ModernSettingBadgeData(
+                    icon: "photo.on.rectangle",
+                    title: "Photo Format",
+                    value: "ProRAW",
+                    tint: ModernDesignSystem.Colors.cameraControlActive
+                ),
+                ModernSettingBadgeData(
+                    icon: "location.fill",
+                    title: "Location",
+                    value: "On",
+                    tint: .orange
+                )
+            ])
+
+            Divider()
+                .background(Color.white.opacity(0.08))
+
+            VStack(alignment: .leading, spacing: ModernDesignSystem.Spacing.sm) {
+                HStack {
+                    Image(systemName: "camera.aperture")
+                        .foregroundColor(ModernDesignSystem.Colors.cameraControlActive)
+                    Text("Telephoto Resolution")
+                        .font(ModernDesignSystem.Typography.body)
+                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                    Spacer()
+                    Text(teleUses12MP ? "12MP" : "48MP")
+                        .font(ModernDesignSystem.Typography.caption)
+                        .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                }
+
+                Picker("Tele Resolution", selection: $teleUses12MP) {
+                    Text("48MP Detail").tag(false)
+                    Text("12MP Low Light").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .disabled(!(selectedCamera == .twoX || selectedCamera == .eightX))
+
+                Text("Choose 12MP for cleaner tele shots in low light, or 48MP for maximum detail.")
+                    .font(ModernDesignSystem.Typography.caption)
                     .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
-                    .tracking(0.5)
-            }
-            .padding(.bottom, 4)
-
-            VStack(spacing: 0) {
-                // Photo Format
-                HStack {
-                    Image(systemName: "photo")
-                        .font(.system(size: 18))
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControlActive)
-                        .frame(width: 24)
-                    Text("Photo Format")
-                        .font(ModernDesignSystem.Typography.body)
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                    Spacer()
-                    Text("ProRAW")
-                        .font(ModernDesignSystem.Typography.body)
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
-                }
-                .padding(.vertical, 12)
-
-                Divider()
-                    .background(ModernDesignSystem.Colors.cameraControlSecondary.opacity(0.2))
-
-                // Location Services
-                HStack {
-                    Image(systemName: "location.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControlActive)
-                        .frame(width: 24)
-                    Text("Location Services")
-                        .font(ModernDesignSystem.Typography.body)
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                    Spacer()
-                    Text("On")
-                        .font(ModernDesignSystem.Typography.body)
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
-                }
-                .padding(.vertical, 12)
-
-                Divider()
-                    .background(ModernDesignSystem.Colors.cameraControlSecondary.opacity(0.2))
-
-                // Tele resolution (2x/8x)
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Image(systemName: "camera.aperture")
-                            .font(.system(size: 18))
-                            .foregroundColor(ModernDesignSystem.Colors.cameraControlActive)
-                            .frame(width: 24)
-                        Text("Telephoto Resolution")
-                            .font(ModernDesignSystem.Typography.body)
-                            .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                        Spacer()
-                    }
-
-                    Picker("Tele Resolution", selection: $teleUses12MP) {
-                        Text("48MP").tag(false)
-                        Text("12MP").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                    .disabled(!(selectedCamera == .twoX || selectedCamera == .eightX))
-
-                    Text("12MP: Better in low light. 48MP: Maximum detail.")
-                        .font(.system(size: 12))
-                        .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
-                        .padding(.top, 4)
-                }
-                .padding(.vertical, 12)
             }
         }
-        .padding(16)
-        .modernCardStyle(.glass)
     }
 }
 
 // MARK: - Modern About Section
 struct ModernAboutSection: View {
     var body: some View {
-        VStack(spacing: ModernDesignSystem.Spacing.lg) {
-            // Section header
-            HStack {
-                Image(systemName: "info.circle")
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
-                Text("About")
-                    .font(ModernDesignSystem.Typography.bodyBold)
-                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-                Spacer()
-            }
-            
-            VStack(spacing: ModernDesignSystem.Spacing.md) {
-                ModernSettingRow(
-                    icon: "app.badge",
-                    title: "Version",
-                    value: "1.0.0",
-                    action: {}
-                )
-            }
+        ModernSettingsCard(
+            title: "About",
+            subtitle: "Build information",
+            icon: "info.circle"
+        ) {
+            ModernSettingRow(
+                icon: "app.badge",
+                title: "Version",
+                value: "1.0.0",
+                action: {}
+            )
         }
-        .modernCardStyle(.glass)
     }
 }
 
@@ -420,5 +367,397 @@ struct ModernSettingRow: View {
             .padding(.vertical, ModernDesignSystem.Spacing.sm)
         }
         .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Shared Components
+
+enum SettingsCategory: String, CaseIterable, Identifiable {
+    case viewfinder, focus, capture, about
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .viewfinder: return "Viewfinder"
+        case .focus: return "Focus"
+        case .capture: return "Capture"
+        case .about: return "About"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .viewfinder: return "Composition, grids, leveling"
+        case .focus: return "Focus peaking and assistance"
+        case .capture: return "Format, metadata & hardware"
+        case .about: return "Build info and acknowledgements"
+        }
+    }
+}
+
+struct SettingsPresetButtonData: Identifiable {
+    let id = UUID()
+    let title: String
+    let subtitle: String
+    let icon: String
+    let tint: Color
+    let action: () -> Void
+}
+
+struct ModernQuickPresetCard: View {
+    let presets: [SettingsPresetButtonData]
+
+    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
+
+    var body: some View {
+        ModernSettingsCard(
+            title: "Quick Presets",
+            subtitle: "Apply common setups instantly",
+            icon: "sparkles"
+        ) {
+            LazyVGrid(columns: columns, spacing: ModernDesignSystem.Spacing.md) {
+                ForEach(presets) { preset in
+                    ModernQuickPresetButton(preset: preset)
+                }
+            }
+        }
+    }
+}
+
+struct ModernQuickPresetButton: View {
+    let preset: SettingsPresetButtonData
+
+    var body: some View {
+        Button {
+            HapticManager.shared.panelToggled()
+            preset.action()
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                Image(systemName: preset.icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.9))
+                Text(preset.title)
+                    .font(ModernDesignSystem.Typography.bodyBold)
+                    .foregroundColor(.white)
+                Text(preset.subtitle)
+                    .font(ModernDesignSystem.Typography.caption)
+                    .foregroundColor(.white.opacity(0.8))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(preset.tint)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct ModernSettingsCard<Content: View>: View {
+    let title: String
+    let subtitle: String?
+    let icon: String
+    private let content: Content
+
+    init(title: String, subtitle: String? = nil, icon: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.subtitle = subtitle
+        self.icon = icon
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: ModernDesignSystem.Spacing.md) {
+            HStack(alignment: .top, spacing: ModernDesignSystem.Spacing.sm) {
+                Image(systemName: icon)
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(ModernDesignSystem.Colors.cameraControlActive)
+                    .padding(8)
+                    .background(
+                        Circle()
+                            .fill(Color.white.opacity(0.08))
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(ModernDesignSystem.Typography.bodyBold)
+                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(ModernDesignSystem.Typography.caption)
+                            .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                    }
+                }
+
+                Spacer()
+            }
+
+            content
+        }
+        .padding(ModernDesignSystem.Spacing.lg)
+        .modernCardStyle(.glass)
+    }
+}
+
+struct ModernDropdownPicker<Option: Identifiable & Equatable>: View {
+    let title: String
+    let icon: String
+    let options: [Option]
+    @Binding var selection: Option
+    let labelProvider: (Option) -> String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                .tracking(0.5)
+
+            Menu {
+                ForEach(options) { option in
+                    Button {
+                        selection = option
+                        HapticManager.shared.gridTypeChanged()
+                    } label: {
+                        HStack {
+                            Text(labelProvider(option))
+                            Spacer()
+                            if option == selection {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            } label: {
+                HStack {
+                    Image(systemName: icon)
+                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                    Text(labelProvider(selection))
+                        .font(ModernDesignSystem.Typography.body)
+                        .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .background(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color.white.opacity(0.05))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        )
+                )
+            }
+        }
+    }
+}
+
+struct ModernToggleRow: View {
+    let icon: String
+    let title: String
+    let subtitle: String?
+    let tint: Color
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack(alignment: .center, spacing: ModernDesignSystem.Spacing.md) {
+            Image(systemName: icon)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundColor(tint)
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(ModernDesignSystem.Typography.body)
+                    .foregroundColor(ModernDesignSystem.Colors.cameraControl)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(ModernDesignSystem.Typography.caption)
+                        .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                }
+            }
+
+            Spacer()
+
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+                .tint(tint)
+        }
+    }
+}
+
+struct GridTypePreview: View {
+    let gridType: GridType
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.02))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+
+            gridOverlay()
+                .padding(16)
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: gridType)
+    }
+
+    @ViewBuilder
+    private func gridOverlay() -> some View {
+        switch gridType {
+        case .ruleOfThirds:
+            RuleOfThirdsGrid()
+                .stroke(Color.white.opacity(0.6), lineWidth: 1)
+        case .goldenRatio:
+            GoldenRatioGrid()
+                .stroke(Color.white.opacity(0.6), lineWidth: 1)
+        case .goldenSpiral:
+            GoldenSpiralGrid()
+                .stroke(Color.white.opacity(0.6), lineWidth: 1)
+        case .centerCrosshair:
+            CenterCrosshairGrid()
+                .stroke(Color.white.opacity(0.6), lineWidth: 1)
+        }
+    }
+}
+
+struct FocusPeakingColorPicker: View {
+    @Binding var selectedColor: Color
+    let colors: [Color]
+
+    private let columns = [GridItem(.adaptive(minimum: 44), spacing: 12)]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: ModernDesignSystem.Spacing.sm) {
+            Text("PEAKING COLOR")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                .tracking(0.5)
+
+            LazyVGrid(columns: columns, spacing: 12) {
+                ForEach(colors, id: \.self) { color in
+                    Button {
+                        selectedColor = color
+                        HapticManager.shared.panelToggled()
+                    } label: {
+                        Circle()
+                            .fill(color.opacity(0.25))
+                            .frame(width: 40, height: 40)
+                            .overlay(
+                                Circle()
+                                    .stroke(color, lineWidth: selectedColor == color ? 3 : 1)
+                            )
+                            .overlay(
+                                Group {
+                                    if selectedColor == color {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundColor(.white)
+                                    }
+                                }
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+}
+
+struct FocusPeakingIntensitySlider: View {
+    @Binding var intensity: Float
+
+    var body: some View {
+        VStack(spacing: ModernDesignSystem.Spacing.sm) {
+            HStack {
+                Text("INTENSITY")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                    .tracking(0.5)
+                Spacer()
+                Text("\(Int(intensity * 100))%")
+                    .font(ModernDesignSystem.Typography.monospace)
+                    .foregroundColor(ModernDesignSystem.Colors.success)
+            }
+
+            Slider(
+                value: Binding(
+                    get: { Double(intensity) },
+                    set: { intensity = Float($0) }
+                ),
+                in: 0.1...1.0,
+                step: 0.05
+            )
+            .accentColor(ModernDesignSystem.Colors.success)
+        }
+    }
+}
+
+struct ModernSettingBadgeGrid: View {
+    let badges: [ModernSettingBadgeData]
+    private let columns = [GridItem(.flexible()), GridItem(.flexible())]
+
+    var body: some View {
+        LazyVGrid(columns: columns, spacing: ModernDesignSystem.Spacing.md) {
+            ForEach(badges) { badge in
+                ModernSettingBadge(badge: badge)
+            }
+        }
+    }
+}
+
+struct ModernSettingBadgeData: Identifiable {
+    let id = UUID()
+    let icon: String
+    let title: String
+    let value: String
+    let tint: Color
+}
+
+struct ModernSettingBadge: View {
+    let badge: ModernSettingBadgeData
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Image(systemName: badge.icon)
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(8)
+                .background(
+                    Circle()
+                        .fill(badge.tint.opacity(0.4))
+                )
+
+            Text(badge.title.uppercased())
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(.white.opacity(0.6))
+                .tracking(0.5)
+
+            Text(badge.value)
+                .font(ModernDesignSystem.Typography.bodyBold)
+                .foregroundColor(.white)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.05))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                )
+        )
     }
 }
