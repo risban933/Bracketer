@@ -161,7 +161,8 @@ enum LevelStatus: Equatable {
 struct MotionLevelOverlay: View {
     let angleDegrees: Double
     @State private var isVisible = true
-    
+    @State private var hideTask: DispatchWorkItem?
+
     private var levelStatus: LevelStatus {
         if abs(angleDegrees) <= 0.5 {
             return .perfect
@@ -233,16 +234,21 @@ struct MotionLevelOverlay: View {
         .onAppear {
             // Auto-hide after showing for a few seconds if level is good
             if levelStatus == .perfect || levelStatus == .good {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                    withAnimation {
-                        isVisible = false
-                    }
-                }
+                scheduleHide(after: 3.0)
             }
+        }
+        .onDisappear {
+            // Cancel any pending hide tasks to prevent state changes after view is gone
+            hideTask?.cancel()
+            hideTask = nil
         }
         .onChange(of: levelStatus) { oldStatus, newStatus in
             // Show overlay when device moves away from level
             if newStatus == .close || newStatus == .off {
+                // Cancel any pending hide task
+                hideTask?.cancel()
+                hideTask = nil
+
                 withAnimation {
                     isVisible = true
                 }
@@ -251,13 +257,24 @@ struct MotionLevelOverlay: View {
                 withAnimation {
                     isVisible = true
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-                    withAnimation {
-                        isVisible = false
-                    }
-                }
+                scheduleHide(after: 1.0)
             }
         }
+    }
+
+    // Helper function to schedule auto-hide with cancellable task
+    private func scheduleHide(after delay: TimeInterval) {
+        // Cancel any existing hide task to prevent overlapping animations
+        hideTask?.cancel()
+
+        // Create a new cancellable hide task
+        let task = DispatchWorkItem {
+            withAnimation {
+                isVisible = false
+            }
+        }
+        hideTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: task)
     }
 }
 
