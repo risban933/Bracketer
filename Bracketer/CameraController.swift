@@ -327,7 +327,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
     }
 
     private func updateUIOrientationFromScene() {
-        let orientation = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.interfaceOrientation ?? .portrait
+        let orientation = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.effectiveGeometry.interfaceOrientation ?? .portrait
         self.currentUIOrientation = orientation
     }
 
@@ -502,7 +502,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                 return
             }
             self.sessionQueue.asyncAfter(deadline: .now() + poll) { [weak self] in
-                guard let self = self else {
+                guard self != nil else {
                     completion()
                     return
                 }
@@ -510,7 +510,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             }
         }
         self.sessionQueue.async { [weak self] in
-            guard let self = self else {
+            guard self != nil else {
                 completion()
                 return
             }
