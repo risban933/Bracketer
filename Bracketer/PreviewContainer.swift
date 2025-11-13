@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import Combine
 
 private enum Constants {
     static let gridLineWidth: CGFloat = 1.0
@@ -678,6 +679,10 @@ struct FocusPeakingOverlay: View {
     let color: Color
     let intensity: Float
 
+    // State for animation timing
+    @State private var currentTime: TimeInterval = Date().timeIntervalSince1970
+    @State private var cancellables = Set<AnyCancellable>()
+
     // Focus peaking parameters
     private let focusAreas: [(CGPoint, CGFloat)] = [
         // Simulated focus areas - in real implementation, this would be calculated from camera feed analysis
@@ -714,18 +719,30 @@ struct FocusPeakingOverlay: View {
                 // Add some additional dynamic elements for more realistic effect
                 ForEach(0..<8) { index in
                     let phase = Double(index) * .pi / 4
-                    let time = Date().timeIntervalSince1970
-                    let animationOffset = sin(time * 2 + phase) * 5
+                    let animationOffset = sin(currentTime * 2 + phase) * 5
 
                     Circle()
                         .fill(color.opacity(0.3 * Double(intensity)))
                         .frame(width: 3, height: 3)
                         .position(
-                            x: geo.size.width * 0.5 + cos(time + phase) * 50 + animationOffset,
-                            y: geo.size.height * 0.5 + sin(time + phase) * 50 + animationOffset
+                            x: geo.size.width * 0.5 + cos(currentTime + phase) * 50 + animationOffset,
+                            y: geo.size.height * 0.5 + sin(currentTime + phase) * 50 + animationOffset
                         )
                 }
             }
+        }
+        .onAppear {
+            // Set up timer to update animation at ~20 FPS for smooth focus peaking animations
+            Timer.publish(every: 0.05, on: .main, in: .common)
+                .autoconnect()
+                .sink { _ in
+                    currentTime = Date().timeIntervalSince1970
+                }
+                .store(in: &cancellables)
+        }
+        .onDisappear {
+            // Clean up timer subscriptions
+            cancellables.removeAll()
         }
     }
 }
@@ -734,6 +751,10 @@ struct FocusPeakingDot: View {
     let position: CGPoint
     let strength: CGFloat
     let color: Color
+
+    // State for animation timing
+    @State private var currentTime: TimeInterval = Date().timeIntervalSince1970
+    @State private var cancellables = Set<AnyCancellable>()
 
     var body: some View {
         ZStack {
@@ -757,8 +778,21 @@ struct FocusPeakingDot: View {
                     .fill(color.opacity(0.2))
                     .frame(width: 12 + strength * 10, height: 12 + strength * 10)
                     .position(position)
-                    .scaleEffect(1 + sin(Date().timeIntervalSince1970 * 3) * 0.1)
+                    .scaleEffect(1 + sin(currentTime * 3) * 0.1)
             }
+        }
+        .onAppear {
+            // Set up timer to update pulsing animation at ~20 FPS
+            Timer.publish(every: 0.05, on: .main, in: .common)
+                .autoconnect()
+                .sink { _ in
+                    currentTime = Date().timeIntervalSince1970
+                }
+                .store(in: &cancellables)
+        }
+        .onDisappear {
+            // Clean up timer subscriptions
+            cancellables.removeAll()
         }
     }
 }
