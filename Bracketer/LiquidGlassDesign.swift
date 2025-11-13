@@ -236,24 +236,6 @@ struct LegacyLiquidGlassModifier: ViewModifier {
     }
 }
 
-// MARK: - Backward Compatibility Extensions
-
-extension View {
-    /// Apply liquid glass effect with fallback for pre-iOS 26
-    func liquidGlassCompatible(
-        intensity: CGFloat = 0.7,
-        tint: Color? = nil,
-        interactive: Bool = false
-    ) -> some View {
-        if #available(iOS 26.0, *) {
-            let glassIntensity: GlassIntensity = intensity < 0.4 ? .subtle : (intensity > 0.8 ? .prominent : .regular)
-            return AnyView(self.liquidGlass(intensity: glassIntensity, tint: tint, interactive: interactive))
-        } else {
-            return AnyView(self.modifier(LegacyLiquidGlassModifier(intensity: intensity, tint: tint)))
-        }
-    }
-}
-
 // MARK: - Enhanced EV Control with Liquid Glass (iOS 26)
 
 @available(iOS 26.0, *)

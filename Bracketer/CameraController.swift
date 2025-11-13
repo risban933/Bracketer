@@ -89,6 +89,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
     private let locationProvider = LocationProvider()
     private var orientationObserver: NSObjectProtocol?
     private var exposureUpdateTimer: Timer?
+    private var notificationAuthorizationGranted = false
 
     override init() {
         super.init()
@@ -166,6 +167,15 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             throw NSError(domain: "Bracketer", code: 2, userInfo: [NSLocalizedDescriptionKey: "Photo library access denied"])
         }
         locationProvider.requestWhenInUse()
+        notificationAuthorizationGranted = await requestNotificationAuthorization()
+    }
+    
+    private func requestNotificationAuthorization() async -> Bool {
+        await withCheckedContinuation { continuation in
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
+                continuation.resume(returning: granted)
+            }
+        }
     }
 
     private func configureSession(initialKind: CameraKind) async {
@@ -361,8 +371,10 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             case .twoX:
                 dev.videoZoomFactor = min(max(2.0, dev.minAvailableVideoZoomFactor), dev.maxAvailableVideoZoomFactor)
             case .eightX:
-                // Base telephoto is 4x; apply an extra 2x digital zoom to reach 8x
-                dev.videoZoomFactor = min(max(2.0, dev.minAvailableVideoZoomFactor), dev.maxAvailableVideoZoomFactor)
+                // Base telephoto is 4x; apply additional digital zoom to reach an 8x view when possible
+                let desiredZoom: CGFloat = 8.0
+                let clampedZoom = min(max(desiredZoom, dev.minAvailableVideoZoomFactor), dev.maxAvailableVideoZoomFactor)
+                dev.videoZoomFactor = clampedZoom
             default:
                 dev.videoZoomFactor = 1.0
             }
@@ -552,6 +564,10 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             self.isCapturing = false
             self.captureProgress = 0
         }
+        
+        if notificationAuthorizationGranted {
+            scheduleCaptureCompletionNotification()
+        }
     }
 
     private func fetchBracketAssets() {
@@ -600,6 +616,26 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
 
     @inline(__always) private func main(_ body: @escaping () -> Void) {
         if Thread.isMainThread { body() } else { DispatchQueue.main.async(execute: body) }
+    }
+    
+    private func scheduleCaptureCompletionNotification() {
+        let content = UNMutableNotificationContent()
+        content.title = "Bracket Capture Complete"
+        content.body = "Your bracketed exposure sequence has been saved to Photos."
+        content.sound = .default
+        
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let request = UNNotificationRequest(
+            identifier: "captureComplete-\(UUID().uuidString)",
+            content: content,
+            trigger: trigger
+        )
+        
+        UNUserNotificationCenter.current().add(request) { error in
+            if let error {
+                Logger.camera("Notification scheduling failed: \(error.localizedDescription)")
+            }
+        }
     }
     
     private func updateExposureUI() {
@@ -709,6 +745,7 @@ enum PhotoSaver {
 
         let filename = bracketLabel.map { "Bracket-\($0)-\(timestamp).dng" } ?? "Bracket-\(timestamp).dng"
 
+        var placeholderIdentifier: String?
         PHPhotoLibrary.shared().performChanges({
             let req = PHAssetCreationRequest.forAsset()
             req.location = location
@@ -716,10 +753,13 @@ enum PhotoSaver {
             let opts = PHAssetResourceCreationOptions()
             opts.originalFilename = filename
             req.addResource(with: .photo, data: data, options: opts)
-            completion(req.placeholderForCreatedAsset?.localIdentifier)
+            placeholderIdentifier = req.placeholderForCreatedAsset?.localIdentifier
         }, completionHandler: { success, error in
             if !success {
                 Logger.photo("Failed to save photo: \(error?.localizedDescription ?? "Unknown error")")
+            }
+            DispatchQueue.main.async {
+                completion(success ? placeholderIdentifier : nil)
             }
         })
     }

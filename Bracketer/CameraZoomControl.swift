@@ -114,27 +114,7 @@ struct FlashModeControl: View {
     @Binding var flashMode: FlashMode
 
     var body: some View {
-        Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                flashMode = flashMode.next()
-            }
-            HapticManager.shared.exposureAdjusted()
-        } label: {
-            ZStack {
-                Circle()
-                    .liquidGlass(
-                        intensity: .regular,
-                        tint: flashMode.tintColor,
-                        interactive: true
-                    )
-                    .frame(width: 44, height: 44)
-
-                Image(systemName: flashMode.iconName)
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white)
-            }
-        }
-        .buttonStyle(.plain)
+        FlashModeMenu(flashMode: $flashMode, style: .modern)
     }
 }
 
@@ -182,33 +162,7 @@ struct TimerModeControl: View {
     @Binding var timerMode: TimerMode
 
     var body: some View {
-        Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                timerMode = timerMode.next()
-            }
-            HapticManager.shared.exposureAdjusted()
-        } label: {
-            ZStack {
-                Circle()
-                    .liquidGlass(
-                        intensity: .regular,
-                        tint: timerMode.tintColor,
-                        interactive: true
-                    )
-                    .frame(width: 44, height: 44)
-
-                if timerMode == .off {
-                    Image(systemName: "timer")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.white)
-                } else {
-                    Text("\(timerMode.seconds)")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-            }
-        }
-        .buttonStyle(.plain)
+        TimerModeMenu(timerMode: $timerMode, style: .modern)
     }
 }
 
@@ -246,6 +200,144 @@ enum TimerMode: CaseIterable {
         let currentIndex = all.firstIndex(of: self) ?? 0
         let nextIndex = (currentIndex + 1) % all.count
         return all[nextIndex]
+    }
+}
+
+extension FlashMode: Identifiable {
+    var id: String { displayName }
+}
+
+extension TimerMode: Identifiable {
+    var id: String { displayName }
+}
+
+// MARK: - Control Picker Helpers
+
+enum ControlButtonStyle {
+    case legacy
+    case modern
+}
+
+struct FlashModeMenu: View {
+    @Binding var flashMode: FlashMode
+    let style: ControlButtonStyle
+
+    var body: some View {
+        Menu {
+            ForEach(FlashMode.allCases) { mode in
+                Button {
+                    guard flashMode != mode else { return }
+                    flashMode = mode
+                    HapticManager.shared.exposureAdjusted()
+                } label: {
+                    Label(mode.displayName, systemImage: mode.iconName)
+                }
+            }
+        } label: {
+            FlashModeMenuLabel(flashMode: flashMode, style: style)
+        }
+        .accessibilityLabel("Flash Mode")
+        .accessibilityValue(flashMode.displayName)
+        .accessibilityHint("Double-tap to choose flash setting")
+    }
+}
+
+struct FlashModeMenuLabel: View {
+    let flashMode: FlashMode
+    let style: ControlButtonStyle
+
+    var body: some View {
+        ControlCircleLabel(style: style, tint: flashMode.tintColor) {
+            let iconColor: Color = style == .legacy ? (flashMode == .off ? .white : .yellow) : .white
+            Image(systemName: flashMode.iconName)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundColor(iconColor)
+        }
+    }
+}
+
+struct TimerModeMenu: View {
+    @Binding var timerMode: TimerMode
+    let style: ControlButtonStyle
+
+    var body: some View {
+        Menu {
+            ForEach(TimerMode.allCases) { option in
+                Button {
+                    guard timerMode != option else { return }
+                    timerMode = option
+                    HapticManager.shared.exposureAdjusted()
+                } label: {
+                    Label(option.displayName, systemImage: "timer")
+                        .labelStyle(.titleAndIcon)
+                }
+            }
+        } label: {
+            TimerModeMenuLabel(timerMode: timerMode, style: style)
+        }
+        .accessibilityLabel("Timer Mode")
+        .accessibilityValue(timerMode.displayName)
+        .accessibilityHint("Double-tap to choose timer length")
+    }
+}
+
+struct TimerModeMenuLabel: View {
+    let timerMode: TimerMode
+    let style: ControlButtonStyle
+
+    var body: some View {
+        ControlCircleLabel(style: style, tint: timerMode.tintColor) {
+            if timerMode == .off {
+                Image(systemName: "timer")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundColor(.white)
+            } else {
+                Text(timerMode.displayName)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(style == .modern ? .white : .orange)
+            }
+        }
+    }
+}
+
+struct ControlCircleLabel<Content: View>: View {
+    let style: ControlButtonStyle
+    let tint: Color?
+    @ViewBuilder private let content: Content
+
+    init(style: ControlButtonStyle, tint: Color?, @ViewBuilder content: () -> Content) {
+        self.style = style
+        self.tint = tint
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack {
+            background
+            content
+        }
+        .frame(width: 44, height: 44)
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        switch style {
+        case .modern:
+            Circle()
+                .liquidGlass(
+                    intensity: .regular,
+                    tint: tint,
+                    interactive: true
+                )
+        case .legacy:
+            Circle()
+                .fill(.ultraThinMaterial)
+                .opacity(0.8)
+                .overlay(
+                    Circle()
+                        .stroke(tint ?? .white.opacity(0.2), lineWidth: tint == nil ? 1 : 2)
+                )
+        }
     }
 }
 
