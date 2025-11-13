@@ -207,8 +207,12 @@ struct ImageViewer: View {
         options.deliveryMode = .highQualityFormat
         options.isSynchronous = false
 
-        let targetSize = CGSize(width: UIScreen.main.bounds.width * UIScreen.main.scale,
-                               height: UIScreen.main.bounds.height * UIScreen.main.scale)
+        // Get screen from window scene context instead of deprecated UIScreen.main
+        let screen = (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.screen
+        let screenBounds = screen?.bounds ?? CGRect(x: 0, y: 0, width: 390, height: 844)
+        let screenScale = screen?.scale ?? 3.0
+        let targetSize = CGSize(width: screenBounds.width * screenScale,
+                               height: screenBounds.height * screenScale)
 
         imageManager.requestImage(for: asset,
                                 targetSize: targetSize,
