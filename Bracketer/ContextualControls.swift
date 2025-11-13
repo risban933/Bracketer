@@ -72,7 +72,7 @@ struct ContextualBottomControls: View {
                 selectedZoom: $selectedZoom,
                 availableZoomLevels: CameraZoomLevel.iPhone17ProMaxLevels
             )
-            .padding(.bottom, 24)
+            .padding(.bottom, 40)
         }
     }
 
@@ -291,7 +291,7 @@ struct ContextualBottomControlsLegacy: View {
                 ModernSettingsButton(showSettings: $showSettings)
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 24)
+            .padding(.bottom, 40)
         }
     }
 

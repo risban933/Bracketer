@@ -71,7 +71,7 @@ struct ModernContentView: View {
                     focusPeakingIntensity: focusPeakingIntensity
                 )
                 
-                // Top status bar (Apple Camera style) - pinned to top edge
+                // Top status bar (Apple Camera style) - positioned with padding from top
                 VStack {
                     if #available(iOS 26.0, *) {
                         ModernTopBarEnhanced(
@@ -88,6 +88,7 @@ struct ModernContentView: View {
                             onLevelToggle: toggleLevel
                         )
                         .alwaysUpright(orientationManager)
+                        .padding(.top, 60)
                     } else {
                         ModernTopBar(
                             camera: camera,
@@ -101,6 +102,7 @@ struct ModernContentView: View {
                             onLevelToggle: toggleLevel
                         )
                         .alwaysUpright(orientationManager)
+                        .padding(.top, 60)
                     }
                     Spacer()
                 }
@@ -409,7 +411,7 @@ struct ModernBottomControls: View {
                 ModernSettingsButton(showSettings: $showSettings)
             }
             .padding(.horizontal, ModernDesignSystem.Spacing.lg)
-            .padding(.bottom, ModernDesignSystem.Spacing.lg)
+            .padding(.bottom, 40)
         }
     }
 }
@@ -1039,7 +1041,7 @@ struct ModernBottomControlsEnhanced: View {
                 selectedZoom: $selectedZoom,
                 availableZoomLevels: CameraZoomLevel.iPhone17ProMaxLevels
             )
-            .padding(.bottom, 20)
+            .padding(.bottom, 40)
         }
     }
 }
