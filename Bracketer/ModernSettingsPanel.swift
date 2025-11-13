@@ -17,92 +17,94 @@ struct ModernSettingsPanel: View {
     private let focusPeakingColors: [Color] = [.red, .blue, .yellow, .green, .orange, .purple, .white]
 
     var body: some View {
-        ZStack {
-            // Enhanced background overlay with glass effect
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(ModernDesignSystem.Animations.spring) {
-                        showSettings = false
-                    }
-                }
-
-            // Settings panel as bottom sheet
-            VStack(spacing: 0) {
-                Spacer()
-
-                VStack(spacing: ModernDesignSystem.Spacing.lg) {
-                    // Drag handle (iOS style)
-                    RoundedRectangle(cornerRadius: 2.5)
-                        .fill(ModernDesignSystem.Colors.cameraControlSecondary)
-                        .frame(width: 36, height: 5)
-                        .padding(.top, 8)
-
-                    // Header
-                    HStack {
-                        Text("Settings")
-                            .font(ModernDesignSystem.Typography.title2)
-                            .foregroundColor(ModernDesignSystem.Colors.cameraControl)
-
-                        Spacer()
-
-                        Button {
-                            withAnimation(ModernDesignSystem.Animations.spring) {
-                                showSettings = false
-                            }
-                            HapticManager.shared.panelToggled()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+        GeometryReader { geometry in
+            ZStack {
+                // Enhanced background overlay with glass effect
+                Color.black.opacity(0.4)
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(ModernDesignSystem.Animations.spring) {
+                            showSettings = false
                         }
                     }
-                    .padding(.horizontal, ModernDesignSystem.Spacing.lg)
-                    .padding(.top, ModernDesignSystem.Spacing.sm)
 
-                    // Settings sections
-                    ScrollView {
-                        VStack(spacing: ModernDesignSystem.Spacing.lg) {
-                            // Viewfinder settings
-                            ModernViewfinderSettings(
-                                showGrid: $showGrid,
-                                gridType: $gridType,
-                                showLevel: $showLevel
-                            )
+                // Settings panel as bottom sheet
+                VStack(spacing: 0) {
+                    Spacer()
 
-                            // Focus settings
-                            ModernFocusSettings(
-                                focusPeakingEnabled: $focusPeakingEnabled,
-                                focusPeakingColor: $focusPeakingColor,
-                                focusPeakingIntensity: $focusPeakingIntensity,
-                                focusPeakingColors: focusPeakingColors
-                            )
+                    VStack(spacing: ModernDesignSystem.Spacing.lg) {
+                        // Drag handle (iOS style)
+                        RoundedRectangle(cornerRadius: 2.5)
+                            .fill(ModernDesignSystem.Colors.cameraControlSecondary)
+                            .frame(width: 36, height: 5)
+                            .padding(.top, 8)
 
-                            // Camera settings
-                            ModernCameraSettings(
-                                teleUses12MP: $camera.teleUses12MP,
-                                selectedCamera: camera.selectedCamera
-                            )
+                        // Header
+                        HStack {
+                            Text("Settings")
+                                .font(ModernDesignSystem.Typography.title2)
+                                .foregroundColor(ModernDesignSystem.Colors.cameraControl)
 
-                            // About section
-                            ModernAboutSection()
+                            Spacer()
+
+                            Button {
+                                withAnimation(ModernDesignSystem.Animations.spring) {
+                                    showSettings = false
+                                }
+                                HapticManager.shared.panelToggled()
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                            }
                         }
                         .padding(.horizontal, ModernDesignSystem.Spacing.lg)
-                        .padding(.bottom, ModernDesignSystem.Spacing.xl)
+                        .padding(.top, ModernDesignSystem.Spacing.sm)
+
+                        // Settings sections
+                        ScrollView {
+                            VStack(spacing: ModernDesignSystem.Spacing.lg) {
+                                // Viewfinder settings
+                                ModernViewfinderSettings(
+                                    showGrid: $showGrid,
+                                    gridType: $gridType,
+                                    showLevel: $showLevel
+                                )
+
+                                // Focus settings
+                                ModernFocusSettings(
+                                    focusPeakingEnabled: $focusPeakingEnabled,
+                                    focusPeakingColor: $focusPeakingColor,
+                                    focusPeakingIntensity: $focusPeakingIntensity,
+                                    focusPeakingColors: focusPeakingColors
+                                )
+
+                                // Camera settings
+                                ModernCameraSettings(
+                                    teleUses12MP: $camera.teleUses12MP,
+                                    selectedCamera: camera.selectedCamera
+                                )
+
+                                // About section
+                                ModernAboutSection()
+                            }
+                            .padding(.horizontal, ModernDesignSystem.Spacing.lg)
+                            .padding(.bottom, ModernDesignSystem.Spacing.xl)
+                        }
                     }
+                    .frame(maxHeight: geometry.size.height * 0.7)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.98)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .stroke(.white.opacity(0.2), lineWidth: 1)
+                            )
+                            .shadow(color: .black.opacity(0.3), radius: 30, x: 0, y: -10)
+                    )
+                    .ignoresSafeArea(edges: .bottom)
                 }
-                .frame(maxHeight: UIScreen.main.bounds.height * 0.7)
-                .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                        .opacity(0.98)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .stroke(.white.opacity(0.2), lineWidth: 1)
-                        )
-                        .shadow(color: .black.opacity(0.3), radius: 30, x: 0, y: -10)
-                )
-                .ignoresSafeArea(edges: .bottom)
             }
         }
     }

@@ -492,7 +492,8 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                 completion()
                 return
             }
-            if let off = device.exposureTargetOffset, abs(off) <= threshold {
+            let off = device.exposureTargetOffset
+            if abs(off) <= threshold {
                 completion()
                 return
             }

@@ -219,10 +219,12 @@ struct CompactStatusIndicator: View {
 @available(iOS 26.0, *)
 struct EVStepQuickSelector: View {
     @Binding var selectedEVStep: Float
+    
+    private let evSteps: [Float] = [1.0, 2.0, 3.0]
 
     var body: some View {
         HStack(spacing: 8) {
-            ForEach([1.0, 2.0, 3.0], id: \.self) { step in
+            ForEach(evSteps, id: \.self) { step in
                 Button {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         selectedEVStep = step

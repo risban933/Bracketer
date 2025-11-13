@@ -122,8 +122,8 @@ struct ModernContentView: View {
                             selectedZoom: $selectedZoom,
                             flashMode: $flashMode,
                             timerMode: $timerMode,
-                            isGridActive: showGrid,
-                            isLevelActive: showLevel,
+                            isGridActive: $showGrid,
+                            isLevelActive: $showLevel,
                             currentShootingMode: $currentShootingMode,
                             onGridToggle: toggleGrid,
                             onLevelToggle: toggleLevel
@@ -142,8 +142,8 @@ struct ModernContentView: View {
                             bracketShotCount: $bracketShotCount,
                             flashMode: $flashMode,
                             timerMode: $timerMode,
-                            isGridActive: showGrid,
-                            isLevelActive: showLevel,
+                            isGridActive: $showGrid,
+                            isLevelActive: $showLevel,
                             currentShootingMode: $currentShootingMode,
                             onGridToggle: toggleGrid,
                             onLevelToggle: toggleLevel
