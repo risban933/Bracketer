@@ -48,12 +48,12 @@ struct ContextualBottomControls: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             // Context-aware secondary controls row
             contextualSecondaryControls
 
             // Main control row (always visible)
-            HStack(spacing: 40) {
+            HStack(spacing: 44) {
                 ModernPhotoLibraryButton()
 
                 EnhancedShutterButton(
@@ -72,7 +72,7 @@ struct ContextualBottomControls: View {
                 selectedZoom: $selectedZoom,
                 availableZoomLevels: CameraZoomLevel.iPhone17ProMaxLevels
             )
-            .padding(.bottom, 20)
+            .padding(.bottom, 24)
         }
     }
 
@@ -92,9 +92,13 @@ struct ContextualBottomControls: View {
 
     // AUTO mode: Essential controls only
     private var autoModeControls: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 20) {
             FlashModeControl(flashMode: $flashMode)
             TimerModeControl(timerMode: $timerMode)
+
+            Spacer()
+                .frame(width: 8)
+
             ModernToggleButton(
                 icon: "square.grid.3x3",
                 isActive: isGridActive,
@@ -105,15 +109,14 @@ struct ContextualBottomControls: View {
                 isActive: isLevelActive,
                 onTap: onLevelToggle
             )
-            ModernProControlButton(showProControls: $showProControls)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     // MANUAL mode: Pro controls prominent
     private var manualModeControls: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 20) {
             // Quick ISO indicator
             CompactStatusIndicator(
                 icon: "camera.aperture",
@@ -135,16 +138,14 @@ struct ContextualBottomControls: View {
                 isActive: isLevelActive,
                 onTap: onLevelToggle
             )
-
-            ModernProControlButton(showProControls: $showProControls)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     // BRACKET mode: EV and shot count controls
     private var bracketModeControls: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 20) {
             // EV step selector
             EVStepQuickSelector(selectedEVStep: $selectedEVStep)
 
@@ -156,16 +157,14 @@ struct ContextualBottomControls: View {
             )
 
             Spacer()
-
-            ModernProControlButton(showProControls: $showProControls)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     // NIGHT mode: No flash, focus on stability
     private var nightModeControls: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 20) {
             TimerModeControl(timerMode: $timerMode)
 
             CompactStatusIndicator(
@@ -181,10 +180,8 @@ struct ContextualBottomControls: View {
                 isActive: isLevelActive,
                 onTap: onLevelToggle
             )
-
-            ModernProControlButton(showProControls: $showProControls)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 }
@@ -275,12 +272,12 @@ struct ContextualBottomControlsLegacy: View {
     }
 
     var body: some View {
-        VStack(spacing: ModernDesignSystem.Spacing.md) {
+        VStack(spacing: 16) {
             // Context-aware secondary controls row
             contextualSecondaryControls
 
             // Main control row
-            HStack(spacing: ModernDesignSystem.Spacing.xl) {
+            HStack(spacing: 44) {
                 ModernPhotoLibraryButton()
 
                 ModernShutterButton(
@@ -293,36 +290,35 @@ struct ContextualBottomControlsLegacy: View {
 
                 ModernSettingsButton(showSettings: $showSettings)
             }
-            .padding(.horizontal, ModernDesignSystem.Spacing.lg)
-            .padding(.bottom, ModernDesignSystem.Spacing.lg)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
         }
     }
 
     @ViewBuilder
     private var contextualSecondaryControls: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 20) {
             switch context {
             case .auto:
                 ModernFlashButton(flashMode: $flashMode)
                 ModernTimerButton(timerMode: $timerMode)
+                Spacer()
+                    .frame(width: 8)
                 ModernToggleButton(icon: "square.grid.3x3", isActive: isGridActive, onTap: onGridToggle)
                 ModernToggleButton(icon: "level", isActive: isLevelActive, onTap: onLevelToggle)
-                ModernProControlButton(showProControls: $showProControls)
 
             case .manual:
                 // Manual mode: fewer controls, focus on pro
                 ModernToggleButton(icon: "level", isActive: isLevelActive, onTap: onLevelToggle)
                 Spacer()
-                ModernProControlButton(showProControls: $showProControls)
 
             case .bracket, .night:
                 ModernTimerButton(timerMode: $timerMode)
                 ModernToggleButton(icon: "level", isActive: isLevelActive, onTap: onLevelToggle)
                 Spacer()
-                ModernProControlButton(showProControls: $showProControls)
             }
         }
-        .padding(.horizontal, ModernDesignSystem.Spacing.lg)
+        .padding(.horizontal, 24)
         .transition(.opacity.combined(with: .move(edge: .top)))
     }
 }
