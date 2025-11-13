@@ -192,6 +192,9 @@ struct ImageViewer: View {
         .onAppear {
             loadImage(at: currentIndex)
         }
+        .onDisappear {
+            imageManager.stopCachingImagesForAllAssets()
+        }
     }
 
     private func loadImage(at index: Int, forceReload: Bool = false) {
@@ -212,11 +215,18 @@ struct ImageViewer: View {
                                 contentMode: .aspectFit,
                                 options: options) { image, info in
             DispatchQueue.main.async {
+                // Check for errors
+                if let error = info?[PHImageErrorKey] as? Error {
+                    Logger.error("Failed to load image: \(error.localizedDescription)")
+                }
+
                 self.currentImage = image
                 self.isLoading = false
 
                 // Load metadata
-                self.loadMetadata(for: asset)
+                if image != nil {
+                    self.loadMetadata(for: asset)
+                }
             }
         }
     }

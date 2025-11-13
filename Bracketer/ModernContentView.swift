@@ -238,6 +238,10 @@ struct ModernContentView: View {
         .onAppear {
             isCompatibleDevice = ModernDeviceGate.isSupported
         }
+        .onDisappear {
+            toastHideTask?.cancel()
+            toastHideTask = nil
+        }
         .alert(item: $camera.lastError) { error in
             Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
         }
@@ -392,7 +396,8 @@ struct ModernBottomControls: View {
                 // Shutter button (larger for better prominence)
                 ModernShutterButton(
                     isCapturing: camera.isCapturing,
-                    progress: camera.captureProgress
+                    progress: camera.captureProgress,
+                    totalSteps: bracketShotCount
                 ) {
                     camera.captureLockdownBracket(evStep: selectedEVStep, shotCount: bracketShotCount)
                 }
@@ -681,6 +686,7 @@ struct ModernPhotoLibraryButton: View {
 struct ModernShutterButton: View {
     let isCapturing: Bool
     let progress: Int
+    let totalSteps: Int
     let action: () -> Void
 
     var body: some View {
@@ -709,7 +715,7 @@ struct ModernShutterButton: View {
                 // Progress ring (increased size)
                 if isCapturing {
                     Circle()
-                        .trim(from: 0, to: CGFloat(progress) / 4.0)
+                        .trim(from: 0, to: CGFloat(progress) / CGFloat(max(1, totalSteps)))
                         .stroke(
                             AngularGradient(
                                 colors: [.yellow, .orange, .yellow],

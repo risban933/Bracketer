@@ -19,12 +19,18 @@ final class DeviceGating: ObservableObject {
         // Get device model identifier
         deviceModel = getDeviceModelIdentifier()
         iosVersion = UIDevice.current.systemVersion
-        
+
+        // Allow simulators for development
+        #if targetEnvironment(simulator)
+        isCompatibleDevice = true
+        return
+        #endif
+
         let isCorrectDevice = deviceModel == "iPhone17,1" // iPhone 17 Pro Max
         let isCorrectOS = compareVersion(iosVersion, "26.0") >= 0
-        
+
         isCompatibleDevice = isCorrectDevice && isCorrectOS
-        
+
         if !isCompatibleDevice {
             generateCompatibilityMessage(deviceOK: isCorrectDevice, osOK: isCorrectOS)
         }

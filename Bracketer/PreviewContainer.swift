@@ -249,27 +249,33 @@ struct CameraPreviewLayerView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PreviewView {
         let v = PreviewView()
-        v.videoPreviewLayer.session = session
-        v.videoPreviewLayer.videoGravity = .resizeAspectFill
+        guard let layer = v.videoPreviewLayer else {
+            Logger.error("Failed to get video preview layer")
+            return v
+        }
+
+        layer.session = session
+        layer.videoGravity = .resizeAspectFill
 
         // Set up orientation handling
-        updateOrientation(for: v.videoPreviewLayer)
+        updateOrientation(for: layer)
 
         // Start observing orientation changes via coordinator to prevent memory leaks
-        context.coordinator.setupOrientationObserver(for: v.videoPreviewLayer)
+        context.coordinator.setupOrientationObserver(for: layer)
 
-        if let c = v.videoPreviewLayer.connection, c.isVideoMirroringSupported {
+        if let c = layer.connection, c.isVideoMirroringSupported {
             c.automaticallyAdjustsVideoMirroring = false
             c.isVideoMirrored = false
         }
 
-        onLayerReady?(v.videoPreviewLayer)
+        onLayerReady?(layer)
         return v
     }
 
     func updateUIView(_ uiView: PreviewView, context: Context) {
-        uiView.videoPreviewLayer.videoGravity = .resizeAspectFill
-        updateOrientation(for: uiView.videoPreviewLayer)
+        guard let layer = uiView.videoPreviewLayer else { return }
+        layer.videoGravity = .resizeAspectFill
+        updateOrientation(for: layer)
     }
 
     static func dismantleUIView(_ uiView: PreviewView, coordinator: Coordinator) {
@@ -337,8 +343,8 @@ final class PreviewView: UIView {
         AVCaptureVideoPreviewLayer.self
     }
 
-    var videoPreviewLayer: AVCaptureVideoPreviewLayer {
-        layer as! AVCaptureVideoPreviewLayer
+    var videoPreviewLayer: AVCaptureVideoPreviewLayer? {
+        layer as? AVCaptureVideoPreviewLayer
     }
 }
 
@@ -681,7 +687,6 @@ struct FocusPeakingOverlay: View {
 
     // State for animation timing
     @State private var currentTime: TimeInterval = Date().timeIntervalSince1970
-    @State private var cancellables = Set<AnyCancellable>()
 
     // Focus peaking parameters
     private let focusAreas: [(CGPoint, CGFloat)] = [
@@ -731,18 +736,12 @@ struct FocusPeakingOverlay: View {
                 }
             }
         }
-        .onAppear {
+        .task {
             // Set up timer to update animation at ~20 FPS for smooth focus peaking animations
-            Timer.publish(every: 0.05, on: .main, in: .common)
-                .autoconnect()
-                .sink { _ in
-                    currentTime = Date().timeIntervalSince1970
-                }
-                .store(in: &cancellables)
-        }
-        .onDisappear {
-            // Clean up timer subscriptions
-            cancellables.removeAll()
+            // Using .task ensures automatic cancellation when the view disappears
+            for await _ in Timer.publish(every: 0.05, on: .main, in: .common).autoconnect().values {
+                currentTime = Date().timeIntervalSince1970
+            }
         }
     }
 }
@@ -754,7 +753,6 @@ struct FocusPeakingDot: View {
 
     // State for animation timing
     @State private var currentTime: TimeInterval = Date().timeIntervalSince1970
-    @State private var cancellables = Set<AnyCancellable>()
 
     var body: some View {
         ZStack {
@@ -781,18 +779,12 @@ struct FocusPeakingDot: View {
                     .scaleEffect(1 + sin(currentTime * 3) * 0.1)
             }
         }
-        .onAppear {
+        .task {
             // Set up timer to update pulsing animation at ~20 FPS
-            Timer.publish(every: 0.05, on: .main, in: .common)
-                .autoconnect()
-                .sink { _ in
-                    currentTime = Date().timeIntervalSince1970
-                }
-                .store(in: &cancellables)
-        }
-        .onDisappear {
-            // Clean up timer subscriptions
-            cancellables.removeAll()
+            // Using .task ensures automatic cancellation when the view disappears
+            for await _ in Timer.publish(every: 0.05, on: .main, in: .common).autoconnect().values {
+                currentTime = Date().timeIntervalSince1970
+            }
         }
     }
 }
