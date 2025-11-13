@@ -150,8 +150,8 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             self.isInitializing = false
             // Invalidate existing timer before creating a new one to prevent leaks
             self.exposureUpdateTimer?.invalidate()
-            self.exposureUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
-                self.updateExposureUI()
+            self.exposureUpdateTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                self?.updateExposureUI()
             }
         }
     }
@@ -653,22 +653,23 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
                 bracketLabel = nil
             }
 
-            let assetId = PhotoSaver.saveRAW(data: data,
-                                           suggestedFilename: "Bracket-\(self.sequenceTimestamp ?? Int(Date().timeIntervalSince1970)).dng",
-                                           location: loc,
-                                           bracketLabel: bracketLabel)
-            if let assetId = assetId {
-                self.bracketAssetIds.append(assetId)
-                Logger.photo("Saved bracket photo \(self.sequenceStep + 1)/\(self.plannedEVs.count): \(bracketLabel ?? "unknown")")
-            }
+            PhotoSaver.saveRAW(data: data,
+                             suggestedFilename: "Bracket-\(self.sequenceTimestamp ?? Int(Date().timeIntervalSince1970)).dng",
+                             location: loc,
+                             bracketLabel: bracketLabel) { assetId in
+                DispatchQueue.main.async {
+                    if let assetId = assetId {
+                        self.bracketAssetIds.append(assetId)
+                        Logger.photo("Saved bracket photo \(self.sequenceStep + 1)/\(self.plannedEVs.count): \(bracketLabel ?? "unknown")")
+                    }
 
-            // Update progress
-            self.sequenceStep += 1
-            let progress = min(self.sequenceStep, self.plannedEVs.count)
-            self.main {
-                self.captureProgress = progress
-                if progress < self.plannedEVs.count {
-                    HapticManager.shared.bracketShotCaptured()
+                    // Update progress
+                    self.sequenceStep += 1
+                    let progress = min(self.sequenceStep, self.plannedEVs.count)
+                    self.captureProgress = progress
+                    if progress < self.plannedEVs.count {
+                        HapticManager.shared.bracketShotCaptured()
+                    }
                 }
             }
         }
@@ -697,7 +698,7 @@ extension CameraController: AVCapturePhotoCaptureDelegate {
 }
 
 enum PhotoSaver {
-    static func saveRAW(data: Data, suggestedFilename: String, location: CLLocation?, bracketLabel: String? = nil) -> String? {
+    static func saveRAW(data: Data, suggestedFilename: String, location: CLLocation?, bracketLabel: String? = nil, completion: @escaping (String?) -> Void) {
         let timestamp: String
         if let range = suggestedFilename.range(of: #"\d+"#, options: .regularExpression),
            let extracted = Int(suggestedFilename[range]) {
@@ -706,10 +707,7 @@ enum PhotoSaver {
             timestamp = String(Int(Date().timeIntervalSince1970))
         }
 
-        let filename = bracketLabel != nil ? "Bracket-\(bracketLabel!)-\(timestamp).dng" : "Bracket-\(timestamp).dng"
-
-        var assetIdentifier: String?
-        let semaphore = DispatchSemaphore(value: 0)
+        let filename = bracketLabel.map { "Bracket-\($0)-\(timestamp).dng" } ?? "Bracket-\(timestamp).dng"
 
         PHPhotoLibrary.shared().performChanges({
             let req = PHAssetCreationRequest.forAsset()
@@ -718,17 +716,12 @@ enum PhotoSaver {
             let opts = PHAssetResourceCreationOptions()
             opts.originalFilename = filename
             req.addResource(with: .photo, data: data, options: opts)
-            assetIdentifier = req.placeholderForCreatedAsset?.localIdentifier
+            completion(req.placeholderForCreatedAsset?.localIdentifier)
         }, completionHandler: { success, error in
             if !success {
                 Logger.photo("Failed to save photo: \(error?.localizedDescription ?? "Unknown error")")
             }
-            semaphore.signal()
         })
-
-        // Wait for the async operation to complete (with timeout)
-        _ = semaphore.wait(timeout: .now() + 5.0)
-        return assetIdentifier
     }
 }
 

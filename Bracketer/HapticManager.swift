@@ -346,6 +346,8 @@ final class HapticManager {
     }
 
     deinit {
+        hapticEngine?.resetHandler = nil
+        hapticEngine?.stoppedHandler = nil
         hapticEngine?.stop()
     }
 }
