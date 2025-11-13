@@ -78,6 +78,7 @@ struct ModernContentView: View {
                             camera: camera,
                             currentShootingMode: currentShootingMode,
                             selectedEVStep: selectedEVStep,
+                            showProControls: $showProControls,
                             flashMode: $flashMode,
                             timerMode: $timerMode,
                             isGridActive: showGrid,
@@ -92,6 +93,7 @@ struct ModernContentView: View {
                             camera: camera,
                             currentShootingMode: currentShootingMode,
                             selectedEVStep: selectedEVStep,
+                            showProControls: $showProControls,
                             isGridActive: showGrid,
                             isLevelActive: showLevel,
                             onModeChange: cycleShootingMode,
@@ -303,6 +305,7 @@ struct ModernTopBar: View {
     let camera: CameraController
     let currentShootingMode: ShootingMode
     let selectedEVStep: Float
+    @Binding var showProControls: Bool
     let isGridActive: Bool
     let isLevelActive: Bool
     let onModeChange: () -> Void
@@ -337,13 +340,13 @@ struct ModernTopBar: View {
 
             Spacer()
 
-            // Right side - Keep minimal for balance
+            // Right side - Pro Controls badge
             HStack(spacing: ModernDesignSystem.Spacing.sm) {
-                // Reserved for status indicators (battery, storage warnings, etc.)
+                CompactProControlsBadge(showProControls: $showProControls)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
         .padding(.bottom, 12)
         .background(.ultraThinMaterial.opacity(0.95))
     }
@@ -773,6 +776,50 @@ struct ModernSettingsButton: View {
     }
 }
 
+struct CompactProControlsBadge: View {
+    @Binding var showProControls: Bool
+
+    var body: some View {
+        Button {
+            withAnimation(ModernDesignSystem.Animations.spring) {
+                showProControls.toggle()
+            }
+            HapticManager.shared.panelToggled()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "dial.medium")
+                    .font(.system(size: 11, weight: .semibold))
+                Text("PRO")
+                    .font(.system(size: 11, weight: .bold))
+            }
+            .foregroundColor(showProControls ? .purple : .white.opacity(0.9))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Group {
+                    if #available(iOS 26.0, *) {
+                        Capsule()
+                            .liquidGlass(
+                                intensity: showProControls ? .prominent : .subtle,
+                                tint: showProControls ? .purple.opacity(0.3) : nil,
+                                interactive: true
+                            )
+                    } else {
+                        Capsule()
+                            .fill(.ultraThinMaterial)
+                            .opacity(0.8)
+                            .overlay(
+                                Capsule()
+                                    .stroke(showProControls ? .purple.opacity(0.6) : .white.opacity(0.2), lineWidth: showProControls ? 2 : 1)
+                            )
+                    }
+                }
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Modern Loading Overlay
 struct ModernLoadingOverlay: View {
     var body: some View {
@@ -879,6 +926,7 @@ struct ModernTopBarEnhanced: View {
     let camera: CameraController
     let currentShootingMode: ShootingMode
     let selectedEVStep: Float
+    @Binding var showProControls: Bool
     @Binding var flashMode: FlashMode
     @Binding var timerMode: TimerMode
     let isGridActive: Bool
@@ -914,13 +962,13 @@ struct ModernTopBarEnhanced: View {
 
             Spacer()
 
-            // Right side - Keep minimal for balance
+            // Right side - Pro Controls badge
             HStack(spacing: 8) {
-                // Reserved for status indicators (battery, storage warnings, etc.)
+                CompactProControlsBadge(showProControls: $showProControls)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
         .padding(.bottom, 12)
         .background(.ultraThinMaterial.opacity(0.95))
     }
