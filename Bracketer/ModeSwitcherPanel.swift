@@ -36,8 +36,14 @@ struct ModeSwitcherPanel: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 20))
-                            .foregroundColor(.white.opacity(0.7))
+                            .foregroundColor(.white.opacity(0.9))
+                            .padding(10)
+                            .background(
+                                Circle()
+                                    .liquidGlass(intensity: .regular, tint: .white.opacity(0.12), interactive: true)
+                            )
                     }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 20)
                 .padding(.vertical, 16)
@@ -71,11 +77,7 @@ struct ModeSwitcherPanel: View {
             .frame(maxWidth: 320)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(.white.opacity(0.2), lineWidth: 1)
-                    )
+                    .overlayGlass(style: .panel, interactive: true)
                     .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
             )
         }
@@ -120,7 +122,11 @@ struct ModeOptionRow: View {
                 // Mode icon
                 ZStack {
                     Circle()
-                        .fill(isSelected ? mode.color.opacity(0.3) : Color.clear)
+                        .liquidGlass(
+                            intensity: isSelected ? .prominent : .subtle,
+                            tint: isSelected ? mode.color.opacity(0.4) : .white.opacity(0.08),
+                            interactive: true
+                        )
                         .frame(width: 44, height: 44)
 
                     Image(systemName: mode.icon)
@@ -158,7 +164,12 @@ struct ModeOptionRow: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(
-                isSelected ? mode.color.opacity(0.1) : Color.clear
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .liquidGlass(
+                        intensity: isSelected ? .regular : .subtle,
+                        tint: isSelected ? mode.color.opacity(0.25) : .white.opacity(0.05),
+                        interactive: true
+                    )
             )
         }
         .buttonStyle(.plain)

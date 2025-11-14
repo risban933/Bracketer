@@ -212,14 +212,10 @@ struct IncompatibleDeviceView: View {
                         .padding(.vertical, ModernDesignSystem.Spacing.md)
                         .background(
                             Capsule()
-                                .fill(.ultraThinMaterial)
-                                .opacity(0.6)
-                                .overlay(
-                                    Capsule()
-                                        .stroke(.white.opacity(0.3), lineWidth: 1)
-                                )
+                                .liquidGlass(intensity: .prominent, tint: .white.opacity(0.2), interactive: true)
                         )
                     }
+                    .buttonStyle(.plain)
                     .applyModernShadow(ModernDesignSystem.Shadows.medium)
                     
                     Spacer()

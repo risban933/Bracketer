@@ -45,9 +45,15 @@ struct DepthMapViewer: View {
                         // Dismiss action would be handled by parent
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white.opacity(0.7))
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.9))
+                            .padding(10)
+                            .background(
+                                Circle()
+                                    .liquidGlass(intensity: .regular, tint: .white.opacity(0.15), interactive: true)
+                            )
                     }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 60)

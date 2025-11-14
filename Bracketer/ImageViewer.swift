@@ -78,9 +78,12 @@ struct ImageViewer: View {
                             .font(.system(size: 20, weight: .medium))
                             .foregroundColor(.white)
                             .padding(12)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Circle())
+                            .background(
+                                Circle()
+                                    .liquidGlass(intensity: .regular, tint: .white.opacity(0.15), interactive: true)
+                            )
                     }
+                    .buttonStyle(.plain)
 
                     Spacer()
 
@@ -121,9 +124,12 @@ struct ImageViewer: View {
                             .font(.system(size: 20, weight: .medium))
                             .foregroundColor(showMetadata ? .yellow : .white)
                             .padding(12)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Circle())
+                            .background(
+                                Circle()
+                                    .liquidGlass(intensity: .regular, tint: showMetadata ? .yellow.opacity(0.25) : .white.opacity(0.12), interactive: true)
+                            )
                     }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 60)
@@ -148,9 +154,12 @@ struct ImageViewer: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(Color.black.opacity(0.6))
-                        .cornerRadius(20)
+                        .background(
+                            Capsule()
+                                .liquidGlass(intensity: .regular, tint: .white.opacity(0.12), interactive: true)
+                        )
                     }
+                    .buttonStyle(.plain)
 
                     Spacer()
 
@@ -163,9 +172,12 @@ struct ImageViewer: View {
                                 .font(.system(size: 20, weight: .medium))
                                 .foregroundColor(.white)
                                 .padding(12)
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(Circle())
+                                .background(
+                                    Circle()
+                                        .liquidGlass(intensity: .regular, tint: .white.opacity(0.12), interactive: true)
+                                )
                         }
+                        .buttonStyle(.plain)
 
                         Button {
                             deleteCurrentImage()
@@ -174,9 +186,12 @@ struct ImageViewer: View {
                                 .font(.system(size: 20, weight: .medium))
                                 .foregroundColor(.red)
                                 .padding(12)
-                                .background(Color.black.opacity(0.6))
-                                .clipShape(Circle())
+                                .background(
+                                    Circle()
+                                        .liquidGlass(intensity: .prominent, tint: .red.opacity(0.25), interactive: true)
+                                )
                         }
+                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, 20)

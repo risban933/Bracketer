@@ -158,14 +158,17 @@ struct CompactZoomDial: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.white)
                     .frame(width: 32, height: 32)
-                    .background(Color.black.opacity(0.6))
-                    .clipShape(Circle())
+                    .background(
+                        Circle()
+                            .liquidGlass(intensity: .regular, tint: .white.opacity(0.15), interactive: true)
+                    )
             }
+            .buttonStyle(.plain)
 
             // Current zoom display
             ZStack {
                 Circle()
-                    .fill(Color.black.opacity(0.6))
+                    .liquidGlass(intensity: .regular, tint: .white.opacity(0.1), interactive: true)
                     .frame(width: 50, height: 50)
 
                 Text(selectedZoom.label)
@@ -181,9 +184,12 @@ struct CompactZoomDial: View {
                     .font(.system(size: 16, weight: .medium))
                     .foregroundColor(.white)
                     .frame(width: 32, height: 32)
-                    .background(Color.black.opacity(0.6))
-                    .clipShape(Circle())
+                    .background(
+                        Circle()
+                            .liquidGlass(intensity: .regular, tint: .white.opacity(0.15), interactive: true)
+                    )
             }
+            .buttonStyle(.plain)
         }
     }
 

@@ -408,7 +408,13 @@ struct HistogramOverlay: View {
                                 Image(systemName: "chevron.down")
                                     .foregroundColor(.white)
                                     .rotationEffect(.degrees(isExpanded ? 0 : 180))
+                                    .padding(8)
+                                    .background(
+                                        Circle()
+                                            .liquidGlass(intensity: .regular, tint: .white.opacity(0.15), interactive: true)
+                                    )
                             }
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 12)
                         .padding(.top, 8)
@@ -428,7 +434,13 @@ struct HistogramOverlay: View {
                                 Image(systemName: "chevron.up")
                                     .foregroundColor(.white)
                                     .rotationEffect(.degrees(isExpanded ? 0 : 180))
+                                    .padding(8)
+                                    .background(
+                                        Circle()
+                                            .liquidGlass(intensity: .regular, tint: .white.opacity(0.15), interactive: true)
+                                    )
                             }
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, 12)
                         .padding(.top, 4)

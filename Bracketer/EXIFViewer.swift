@@ -57,9 +57,15 @@ struct EXIFViewer: View {
                 showFullScreen = false
             } label: {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.white.opacity(0.7))
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.9))
+                    .padding(10)
+                    .background(
+                        Circle()
+                            .liquidGlass(intensity: .regular, tint: .white.opacity(0.15), interactive: true)
+                    )
             }
+            .buttonStyle(.plain)
         }
     }
     
@@ -242,9 +248,12 @@ struct EXIFViewer: View {
                     .foregroundColor(.white.opacity(0.6))
             }
             .padding(16)
-            .background(Color.blue.opacity(0.2))
-            .cornerRadius(12)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .liquidGlass(intensity: .regular, tint: .blue.opacity(0.35), interactive: true)
+            )
         }
+        .buttonStyle(.plain)
     }
     
     private var rawExifSection: some View {
