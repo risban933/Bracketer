@@ -47,7 +47,6 @@ enum ShootingMode: String, CaseIterable {
 struct PreviewContainer: View {
     let session: AVCaptureSession
     var onLayerReady: ((AVCaptureVideoPreviewLayer) -> Void)?
-    let orientation: UIInterfaceOrientation
     var gridType: GridType = .ruleOfThirds
     var showGrid: Bool = true
     var levelAngle: Double = 0
@@ -56,9 +55,11 @@ struct PreviewContainer: View {
     var focusPeakingColor: Color = .red
     var focusPeakingIntensity: Float = 0.5
 
+    @EnvironmentObject var orientationManager: OrientationManager
+
     var body: some View {
         GeometryReader { geo in
-            let previewAspect: CGFloat = orientation.isPortrait ? 3.0 / 4.0 : 4.0 / 3.0
+            let previewAspect: CGFloat = orientationManager.isPortrait ? 3.0 / 4.0 : 4.0 / 3.0
 
             ZStack {
                 // Background to fill the screen behind the 4:3 preview
@@ -260,12 +261,7 @@ struct CameraPreviewLayerView: UIViewRepresentable {
         layer.session = session
         layer.videoGravity = .resizeAspectFill
 
-        // Set up orientation handling
-        updateOrientation(for: layer)
-
-        // Start observing orientation changes via coordinator to prevent memory leaks
-        context.coordinator.setupOrientationObserver(for: layer)
-
+        // Configure video mirroring
         if let c = layer.connection, c.isVideoMirroringSupported {
             c.automaticallyAdjustsVideoMirroring = false
             c.isVideoMirrored = false
@@ -278,65 +274,19 @@ struct CameraPreviewLayerView: UIViewRepresentable {
     func updateUIView(_ uiView: PreviewView, context: Context) {
         guard let layer = uiView.videoPreviewLayer else { return }
         layer.videoGravity = .resizeAspectFill
-        updateOrientation(for: layer)
+        // Note: Preview layer is NOT rotated - it stays fixed to match device screen
+        // Only photo output connection is rotated (handled in CameraController)
     }
 
     static func dismantleUIView(_ uiView: PreviewView, coordinator: Coordinator) {
-        coordinator.removeOrientationObserver()
-    }
-
-    private func updateOrientation(for previewLayer: AVCaptureVideoPreviewLayer) {
-        guard let connection = previewLayer.connection else { return }
-
-        let deviceOrientation = UIDevice.current.orientation
-        let rotationAngle: CGFloat
-
-        // Convert device orientation to rotation angle (in degrees)
-        switch deviceOrientation {
-        case .portrait:
-            rotationAngle = 0
-        case .portraitUpsideDown:
-            rotationAngle = 180
-        case .landscapeLeft:
-            rotationAngle = 90
-        case .landscapeRight:
-            rotationAngle = 270
-        default:
-            rotationAngle = 0  // Default to portrait
-        }
-
-        // iOS 17+ uses videoRotationAngle instead of deprecated videoOrientation
-        connection.videoRotationAngle = rotationAngle
+        // No cleanup needed - coordinator no longer manages orientation
     }
 
     class Coordinator {
         let parent: CameraPreviewLayerView
-        private var orientationObserver: NSObjectProtocol?
 
         init(parent: CameraPreviewLayerView) {
             self.parent = parent
-        }
-
-        func setupOrientationObserver(for previewLayer: AVCaptureVideoPreviewLayer) {
-            orientationObserver = NotificationCenter.default.addObserver(
-                forName: UIDevice.orientationDidChangeNotification,
-                object: nil,
-                queue: .main
-            ) { [weak previewLayer] _ in
-                guard let previewLayer = previewLayer else { return }
-                self.parent.updateOrientation(for: previewLayer)
-            }
-        }
-
-        func removeOrientationObserver() {
-            if let observer = orientationObserver {
-                NotificationCenter.default.removeObserver(observer)
-                orientationObserver = nil
-            }
-        }
-
-        deinit {
-            removeOrientationObserver()
         }
     }
 }
