@@ -44,6 +44,9 @@ struct ModernContentView: View {
     var body: some View {
         GeometryReader { geometry in
             let isLandscape = geometry.size.width > geometry.size.height
+            // 4:3 preview centered with possible side pillars in landscape
+            let previewWidth = isLandscape ? geometry.size.height * (4.0 / 3.0) : geometry.size.width
+            let sideBarWidth = isLandscape ? max((geometry.size.width - previewWidth) / 2.0, 0) : 0
             ZStack {
                 // Camera preview with overlays
                 ModernCameraPreview(
@@ -60,21 +63,26 @@ struct ModernContentView: View {
                 // Top status bar (Apple Camera style)
                 Group {
                     if isLandscape {
-                        HStack {
-                            ModernTopBarEnhanced(
-                                camera: camera,
-                                currentShootingMode: $currentShootingMode,
-                                selectedEVStep: selectedEVStep,
-                                showProControls: $showProControls,
-                                flashMode: $flashMode,
-                                timerMode: $timerMode,
-                                isGridActive: showGrid,
-                                isLevelActive: showLevel,
-                                onGridToggle: toggleGrid,
-                                onLevelToggle: toggleLevel
-                            )
-                            .padding(.leading, 24)
-                            .padding(.top, 24)
+                        HStack(spacing: 0) {
+                            VStack {
+                                ModernTopBarEnhanced(
+                                    camera: camera,
+                                    currentShootingMode: $currentShootingMode,
+                                    selectedEVStep: selectedEVStep,
+                                    showProControls: $showProControls,
+                                    flashMode: $flashMode,
+                                    timerMode: $timerMode,
+                                    isGridActive: showGrid,
+                                    isLevelActive: showLevel,
+                                    onGridToggle: toggleGrid,
+                                    onLevelToggle: toggleLevel
+                                )
+                                .padding(.top, 24)
+                                .padding(.horizontal, 12)
+                                Spacer()
+                            }
+                            .frame(width: sideBarWidth)
+
                             Spacer()
                         }
                     } else {
@@ -100,30 +108,35 @@ struct ModernContentView: View {
                 // Bottom controls (Apple Camera style) - buttons rotate with device
                 Group {
                     if isLandscape {
-                        HStack {
+                        HStack(spacing: 0) {
                             Spacer()
-                            ContextualBottomControls(
-                                camera: camera,
-                                showProControls: $showProControls,
-                                showSettings: $showSettings,
-                                selectedEVStep: $selectedEVStep,
-                                currentEVCompensation: $currentEVCompensation,
-                                evCompensationLocked: $evCompensationLocked,
-                                focusPeakingEnabled: $focusPeakingEnabled,
-                                focusPeakingColor: $focusPeakingColor,
-                                focusPeakingIntensity: $focusPeakingIntensity,
-                                bracketShotCount: $bracketShotCount,
-                                selectedZoom: $selectedZoom,
-                                flashMode: $flashMode,
-                                timerMode: $timerMode,
-                                isGridActive: $showGrid,
-                                isLevelActive: $showLevel,
-                                currentShootingMode: $currentShootingMode,
-                                onGridToggle: toggleGrid,
-                                onLevelToggle: toggleLevel
-                            )
-                            .padding(.trailing, 24)
-                            .padding(.bottom, 24)
+
+                            VStack {
+                                Spacer()
+                                ContextualBottomControls(
+                                    camera: camera,
+                                    showProControls: $showProControls,
+                                    showSettings: $showSettings,
+                                    selectedEVStep: $selectedEVStep,
+                                    currentEVCompensation: $currentEVCompensation,
+                                    evCompensationLocked: $evCompensationLocked,
+                                    focusPeakingEnabled: $focusPeakingEnabled,
+                                    focusPeakingColor: $focusPeakingColor,
+                                    focusPeakingIntensity: $focusPeakingIntensity,
+                                    bracketShotCount: $bracketShotCount,
+                                    selectedZoom: $selectedZoom,
+                                    flashMode: $flashMode,
+                                    timerMode: $timerMode,
+                                    isGridActive: $showGrid,
+                                    isLevelActive: $showLevel,
+                                    currentShootingMode: $currentShootingMode,
+                                    onGridToggle: toggleGrid,
+                                    onLevelToggle: toggleLevel
+                                )
+                                .padding(.bottom, 24)
+                                .padding(.horizontal, 12)
+                            }
+                            .frame(width: sideBarWidth)
                         }
                     } else {
                         VStack {
