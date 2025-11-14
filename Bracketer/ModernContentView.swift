@@ -8,7 +8,6 @@ import Photos
 struct ModernContentView: View {
     @StateObject private var camera = CameraController()
     @StateObject private var motionManager = MotionLevelManager()
-    @EnvironmentObject var orientationManager: OrientationManager
 
     // UI State
     @State private var showProControls = false
@@ -71,11 +70,9 @@ struct ModernContentView: View {
                         onGridToggle: toggleGrid,
                         onLevelToggle: toggleLevel
                     )
-                    .alwaysUpright(orientationManager, anchor: .top)
                     .padding(.top, 60)
                     Spacer()
                 }
-                .alwaysUpright(orientationManager, anchor: .bottom)
 
                 // Bottom controls (Apple Camera style) - buttons rotate with device
                 VStack {
@@ -103,7 +100,7 @@ struct ModernContentView: View {
                     )
                 }
                 
-                // Pro Controls Overlay - rotates with device
+                // Pro Controls Overlay
                 if showProControls {
                     ModernProControls(
                         camera: camera,
@@ -116,7 +113,6 @@ struct ModernContentView: View {
                         focusPeakingIntensity: $focusPeakingIntensity,
                         bracketShotCount: $bracketShotCount
                     )
-                    .alwaysUpright(orientationManager)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
@@ -132,7 +128,6 @@ struct ModernContentView: View {
                         focusPeakingColor: $focusPeakingColor,
                         focusPeakingIntensity: $focusPeakingIntensity
                     )
-                    .alwaysUpright(orientationManager)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
@@ -821,5 +816,4 @@ struct ModernBottomControlsEnhanced: View {
 
 #Preview {
     ModernContentView()
-        .environmentObject(OrientationManager())
 }

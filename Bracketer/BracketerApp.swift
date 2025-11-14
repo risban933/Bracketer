@@ -6,7 +6,6 @@ import SwiftUI
 @main
 struct BracketerApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var orientationManager = OrientationManager()
 
     init() {
         // Support all orientations - camera preview will auto-rotate
@@ -16,7 +15,6 @@ struct BracketerApp: App {
     var body: some Scene {
         WindowGroup {
             ModernContentView()
-                .environmentObject(orientationManager)
                 .onAppear {
                     // Support all orientations for camera
                     AppDelegate.orientationLock = .all
