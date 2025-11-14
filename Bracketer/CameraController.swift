@@ -540,13 +540,20 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
     }
 
     private func preferredQualityPrioritization() -> AVCapturePhotoOutput.QualityPrioritization {
-        switch photoOutput.maxPhotoQualityPrioritization {
-        case .quality:
-            return .quality
+        let maxPriority = photoOutput.maxPhotoQualityPrioritization
+
+        // For bracketed capture on iOS 26 we've seen crashes when requesting
+        // a priority higher than what the output effectively supports.
+        // To be absolutely safe, clamp to .balanced or .speed only.
+        switch maxPriority {
+        case .speed:
+            return .speed
         case .balanced:
             return .balanced
-        case .speed:
-            fallthrough
+        case .quality:
+            // .quality may not be reliably supported for ProRAW brackets,
+            // so prefer .balanced even if .quality is reported as available.
+            return .balanced
         @unknown default:
             return .speed
         }

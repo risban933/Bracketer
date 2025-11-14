@@ -44,11 +44,6 @@ struct ModernContentView: View {
     var body: some View {
         GeometryReader { geometry in
             let isLandscape = geometry.size.width > geometry.size.height
-            // 4:3 preview centered with possible side pillars in landscape.
-            // Match PreviewContainer's aspectFit behavior: preview width can't exceed screen width.
-            let rawPreviewWidth = isLandscape ? geometry.size.height * (4.0 / 3.0) : geometry.size.width
-            let previewWidth = min(geometry.size.width, rawPreviewWidth)
-            let sideBarWidth = isLandscape ? max((geometry.size.width - previewWidth) / 2.0, 0) : 0
             ZStack {
                 // Camera preview with overlays
                 ModernCameraPreview(
@@ -65,26 +60,21 @@ struct ModernContentView: View {
                 // Top status bar (Apple Camera style)
                 Group {
                     if isLandscape {
-                        HStack(spacing: 0) {
-                            VStack {
-                                ModernTopBarEnhanced(
-                                    camera: camera,
-                                    currentShootingMode: $currentShootingMode,
-                                    selectedEVStep: selectedEVStep,
-                                    showProControls: $showProControls,
-                                    flashMode: $flashMode,
-                                    timerMode: $timerMode,
-                                    isGridActive: showGrid,
-                                    isLevelActive: showLevel,
-                                    onGridToggle: toggleGrid,
-                                    onLevelToggle: toggleLevel
-                                )
-                                .padding(.top, 24)
-                                .padding(.horizontal, 12)
-                                Spacer()
-                            }
-                            .frame(width: sideBarWidth)
-
+                        VStack {
+                            ModernTopBarEnhanced(
+                                camera: camera,
+                                currentShootingMode: $currentShootingMode,
+                                selectedEVStep: selectedEVStep,
+                                showProControls: $showProControls,
+                                flashMode: $flashMode,
+                                timerMode: $timerMode,
+                                isGridActive: showGrid,
+                                isLevelActive: showLevel,
+                                onGridToggle: toggleGrid,
+                                onLevelToggle: toggleLevel
+                            )
+                            .padding(.top, 16)
+                            .padding(.horizontal, 16)
                             Spacer()
                         }
                     } else {
@@ -110,35 +100,30 @@ struct ModernContentView: View {
                 // Bottom controls (Apple Camera style) - buttons rotate with device
                 Group {
                     if isLandscape {
-                        HStack(spacing: 0) {
+                        VStack {
                             Spacer()
-
-                            VStack {
-                                Spacer()
-                                ContextualBottomControls(
-                                    camera: camera,
-                                    showProControls: $showProControls,
-                                    showSettings: $showSettings,
-                                    selectedEVStep: $selectedEVStep,
-                                    currentEVCompensation: $currentEVCompensation,
-                                    evCompensationLocked: $evCompensationLocked,
-                                    focusPeakingEnabled: $focusPeakingEnabled,
-                                    focusPeakingColor: $focusPeakingColor,
-                                    focusPeakingIntensity: $focusPeakingIntensity,
-                                    bracketShotCount: $bracketShotCount,
-                                    selectedZoom: $selectedZoom,
-                                    flashMode: $flashMode,
-                                    timerMode: $timerMode,
-                                    isGridActive: $showGrid,
-                                    isLevelActive: $showLevel,
-                                    currentShootingMode: $currentShootingMode,
-                                    onGridToggle: toggleGrid,
-                                    onLevelToggle: toggleLevel
-                                )
-                                .padding(.bottom, 24)
-                                .padding(.horizontal, 12)
-                            }
-                            .frame(width: sideBarWidth)
+                            ContextualBottomControls(
+                                camera: camera,
+                                showProControls: $showProControls,
+                                showSettings: $showSettings,
+                                selectedEVStep: $selectedEVStep,
+                                currentEVCompensation: $currentEVCompensation,
+                                evCompensationLocked: $evCompensationLocked,
+                                focusPeakingEnabled: $focusPeakingEnabled,
+                                focusPeakingColor: $focusPeakingColor,
+                                focusPeakingIntensity: $focusPeakingIntensity,
+                                bracketShotCount: $bracketShotCount,
+                                selectedZoom: $selectedZoom,
+                                flashMode: $flashMode,
+                                timerMode: $timerMode,
+                                isGridActive: $showGrid,
+                                isLevelActive: $showLevel,
+                                currentShootingMode: $currentShootingMode,
+                                onGridToggle: toggleGrid,
+                                onLevelToggle: toggleLevel
+                            )
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 20)
                         }
                     } else {
                         VStack {
@@ -262,6 +247,27 @@ struct ModernContentView: View {
         }
         .alert(item: $camera.lastError) { error in
             Alert(title: Text("Error"), message: Text(error.message), dismissButton: .default(Text("OK")))
+        }
+        .fullScreenCover(isPresented: $camera.showImageViewer) {
+            // If we don't have assets for some reason, present a simple fallback
+            if camera.lastBracketAssets.isEmpty {
+                ZStack {
+                    Color.black.ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        Text("No photos available")
+                            .foregroundColor(.white.opacity(0.9))
+                            .font(.system(size: 18, weight: .semibold))
+                        Button("Close") {
+                            camera.showImageViewer = false
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+            } else {
+                ImageViewer(bracketAssets: camera.lastBracketAssets) {
+                    camera.showImageViewer = false
+                }
+            }
         }
     }
     
