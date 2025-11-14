@@ -44,8 +44,10 @@ struct ModernContentView: View {
     var body: some View {
         GeometryReader { geometry in
             let isLandscape = geometry.size.width > geometry.size.height
-            // 4:3 preview centered with possible side pillars in landscape
-            let previewWidth = isLandscape ? geometry.size.height * (4.0 / 3.0) : geometry.size.width
+            // 4:3 preview centered with possible side pillars in landscape.
+            // Match PreviewContainer's aspectFit behavior: preview width can't exceed screen width.
+            let rawPreviewWidth = isLandscape ? geometry.size.height * (4.0 / 3.0) : geometry.size.width
+            let previewWidth = min(geometry.size.width, rawPreviewWidth)
             let sideBarWidth = isLandscape ? max((geometry.size.width - previewWidth) / 2.0, 0) : 0
             ZStack {
                 // Camera preview with overlays
