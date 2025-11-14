@@ -202,31 +202,6 @@ struct MotionLevelOverlay: View {
                     .scaleEffect(levelStatus == .perfect ? 1.5 : 1.0)
                     .animation(.easeInOut(duration: 0.2), value: levelStatus)
                 
-                // Angle indicator
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 4) {
-                            Text(levelStatus.description)
-                                .font(.caption)
-                                .foregroundColor(levelStatus.color)
-                            Text("\(Int(angleDegrees))°")
-                                .font(.caption2)
-                                .foregroundColor(.white.opacity(0.8))
-                                .monospacedDigit()
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(
-                            Capsule()
-                                .fill(.ultraThinMaterial)
-                                .opacity(0.8)
-                        )
-                        .padding(.trailing, ModernDesignSystem.Spacing.lg)
-                        .padding(.bottom, ModernDesignSystem.Spacing.xl)
-                    }
-                }
             }
         }
         .opacity(isVisible ? 1 : 0)

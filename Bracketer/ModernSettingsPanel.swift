@@ -113,9 +113,15 @@ struct ModernSettingsPanel: View {
                                 HapticManager.shared.panelToggled()
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
+                                    .font(.system(size: 20, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(10)
+                                    .background(
+                                        Circle()
+                                            .liquidGlass(intensity: .prominent, tint: .white.opacity(0.12), interactive: true)
+                                    )
                             }
+                            .buttonStyle(.plain)
                         }
                         .padding(.horizontal, ModernDesignSystem.Spacing.lg)
 
@@ -164,15 +170,15 @@ struct ModernSettingsPanel: View {
                     }
                     .frame(maxHeight: geometry.size.height * 0.75)
                     .background(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(.ultraThinMaterial)
-                            .opacity(0.98)
+                        RoundedRectangle(cornerRadius: 28, style: .continuous)
+                            .fill(Color.black.opacity(0.5))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .stroke(.white.opacity(0.2), lineWidth: 1)
+                                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                    .liquidGlass(intensity: .regular, tint: .white.opacity(0.1), interactive: true)
                             )
-                            .shadow(color: .black.opacity(0.3), radius: 30, x: 0, y: -10)
+                            .shadow(color: .black.opacity(0.35), radius: 28, x: 0, y: -12)
                     )
+                    .padding(.horizontal, 12)
                     .ignoresSafeArea(edges: .bottom)
                 }
             }
@@ -365,6 +371,11 @@ struct ModernSettingRow: View {
                     .foregroundColor(ModernDesignSystem.Colors.cameraControlSecondary)
             }
             .padding(.vertical, ModernDesignSystem.Spacing.sm)
+            .padding(.horizontal, ModernDesignSystem.Spacing.md)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .liquidGlass(intensity: .subtle, tint: .white.opacity(0.08), interactive: true)
+            )
         }
         .buttonStyle(.plain)
     }
@@ -449,11 +460,7 @@ struct ModernQuickPresetButton: View {
             .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(preset.tint)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                    )
+                    .liquidGlass(intensity: .prominent, tint: preset.tint.opacity(0.6), interactive: true)
             )
         }
         .buttonStyle(.plain)
@@ -551,11 +558,7 @@ struct ModernDropdownPicker<Option: Identifiable & Equatable>: View {
                 .padding(.horizontal, 14)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(Color.white.opacity(0.05))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                        )
+                        .liquidGlass(intensity: .regular, tint: .white.opacity(0.08), interactive: true)
                 )
             }
         }
@@ -653,7 +656,11 @@ struct FocusPeakingColorPicker: View {
                         HapticManager.shared.panelToggled()
                     } label: {
                         Circle()
-                            .fill(color.opacity(0.25))
+                            .liquidGlass(
+                                intensity: selectedColor == color ? .prominent : .regular,
+                                tint: color.opacity(selectedColor == color ? 0.6 : 0.3),
+                                interactive: true
+                            )
                             .frame(width: 40, height: 40)
                             .overlay(
                                 Circle()

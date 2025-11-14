@@ -71,10 +71,11 @@ struct ModernContentView: View {
                         onGridToggle: toggleGrid,
                         onLevelToggle: toggleLevel
                     )
-                    .alwaysUpright(orientationManager)
+                    .alwaysUpright(orientationManager, anchor: .top)
                     .padding(.top, 60)
                     Spacer()
                 }
+                .alwaysUpright(orientationManager, anchor: .bottom)
 
                 // Bottom controls (Apple Camera style) - buttons rotate with device
                 VStack {
@@ -101,7 +102,6 @@ struct ModernContentView: View {
                         onLevelToggle: toggleLevel
                     )
                 }
-                .alwaysUpright(orientationManager)
                 
                 // Pro Controls Overlay - rotates with device
                 if showProControls {
@@ -116,8 +116,8 @@ struct ModernContentView: View {
                         focusPeakingIntensity: $focusPeakingIntensity,
                         bracketShotCount: $bracketShotCount
                     )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
                     .alwaysUpright(orientationManager)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
 
                 // Settings Overlay - slides up from bottom (iOS style bottom sheet)
@@ -132,8 +132,8 @@ struct ModernContentView: View {
                         focusPeakingColor: $focusPeakingColor,
                         focusPeakingIntensity: $focusPeakingIntensity
                     )
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
                     .alwaysUpright(orientationManager)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 
                 // Loading and progress overlays
@@ -181,6 +181,10 @@ struct ModernContentView: View {
         }
         .onChange(of: showLevel) { _, newValue in
             motionManager.isLevelingActive = newValue
+        }
+        .onChange(of: selectedZoom) { _, newValue in
+            HapticManager.shared.lensSwitched()
+            camera.switchCamera(to: newValue.cameraKind)
         }
         .task {
             await camera.start()
@@ -336,7 +340,7 @@ struct ModernBottomControls: View {
             // Main control row
             HStack(spacing: ModernDesignSystem.Spacing.xl) {
                 // Photo library
-                ModernPhotoLibraryButton()
+                ModernPhotoLibraryButton(camera: camera)
 
                 // Shutter button (larger for better prominence)
                 ModernShutterButton(
@@ -484,9 +488,11 @@ struct ModernProControlButton: View {
 }
 
 struct ModernPhotoLibraryButton: View {
+    @ObservedObject var camera: CameraController
+
     var body: some View {
         Button {
-            // Photo library
+            camera.presentMostRecentAsset()
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
@@ -788,7 +794,7 @@ struct ModernBottomControlsEnhanced: View {
             // Main control row with enhanced shutter button
             HStack(spacing: 40) {
                 // Photo library
-                ModernPhotoLibraryButton()
+                ModernPhotoLibraryButton(camera: camera)
 
                 // Enhanced shutter button (larger size)
                 EnhancedShutterButton(

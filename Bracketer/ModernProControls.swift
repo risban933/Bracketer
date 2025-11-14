@@ -44,18 +44,16 @@ struct ModernProControls: View {
 
                 // Pro controls panel - bottom sheet
                 VStack(spacing: 0) {
-                    // Drag handle
                     RoundedRectangle(cornerRadius: 2.5)
-                        .fill(.white.opacity(0.3))
+                        .fill(.white.opacity(0.28))
                         .frame(width: 36, height: 5)
-                        .padding(.top, 12)
-                        .padding(.bottom, 8)
+                        .padding(.top, 14)
+                        .padding(.bottom, 6)
 
-                    // Header
                     HStack {
                         Text("Pro Controls")
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundColor(.white)
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .foregroundColor(.white.opacity(0.95))
 
                         Spacer()
 
@@ -63,18 +61,21 @@ struct ModernProControls: View {
                             dismissSheet()
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 28))
-                                .foregroundColor(.white.opacity(0.8))
-                                .frame(width: 44, height: 44)
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundColor(.white.opacity(0.9))
+                                .padding(10)
+                                .background(
+                                    Circle()
+                                        .liquidGlass(intensity: .regular, tint: .white.opacity(0.15), interactive: true)
+                                )
                         }
+                        .buttonStyle(.plain)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 12)
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 6)
 
-                    // Control sections
                     ScrollView {
-                        VStack(spacing: 24) {
-                            // Exposure controls with yellow tint
+                        VStack(spacing: 20) {
                             ModernExposureControls(
                                 manualISO: $manualISO,
                                 manualShutterSpeed: $manualShutterSpeed,
@@ -82,7 +83,6 @@ struct ModernProControls: View {
                                 isExpanded: $isExposureExpanded
                             )
 
-                            // Focus controls with green tint
                             ModernFocusControls(
                                 manualFocus: $manualFocus,
                                 focusPeakingEnabled: $focusPeakingEnabled,
@@ -92,7 +92,6 @@ struct ModernProControls: View {
                                 isExpanded: $isFocusExpanded
                             )
 
-                            // Bracketing controls with orange tint
                             ModernBracketingControls(
                                 selectedEVStep: $selectedEVStep,
                                 currentEVCompensation: $currentEVCompensation,
@@ -101,15 +100,22 @@ struct ModernProControls: View {
                                 isExpanded: $isBracketingExpanded
                             )
                         }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, geometry.safeAreaInsets.bottom + 20)
+                        .padding(.horizontal, 28)
+                        .padding(.top, 12)
+                        .padding(.bottom, geometry.safeAreaInsets.bottom + 28)
                     }
                 }
                 .frame(maxHeight: geometry.size.height * 0.75)
                 .background(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .overlayGlass(style: .panel, interactive: true)
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .fill(Color.black.opacity(0.35))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                                .liquidGlass(intensity: .regular, tint: .white.opacity(0.08), interactive: true)
+                        )
+                        .shadow(color: .black.opacity(0.45), radius: 32, x: 0, y: 18)
                 )
+                .padding(.horizontal, 10)
                 .offset(y: dragOffset)
                 .gesture(
                     DragGesture()
@@ -163,10 +169,10 @@ struct ModernExposureControls: View {
             } label: {
                 HStack {
                     Image(systemName: "sun.max.fill")
-                        .foregroundColor(.yellow)
+                        .foregroundColor(.yellow.opacity(0.85))
                     Text("Exposure")
                         .font(.system(size: 20, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundColor(.white.opacity(0.95))
                     Spacer()
                     Image(systemName: "chevron.down")
                         .font(.system(size: 14, weight: .semibold))
@@ -174,6 +180,12 @@ struct ModernExposureControls: View {
                         .rotationEffect(.degrees(isExpanded ? 0 : -90))
                 }
                 .frame(minHeight: 44)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .liquidGlass(intensity: .regular, tint: .yellow.opacity(0.2), interactive: true)
+                )
             }
             .buttonStyle(.plain)
 
@@ -213,11 +225,8 @@ struct ModernExposureControls: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .liquidGlass(intensity: .regular, tint: .yellow.opacity(0.1), interactive: false)
-        )
+        .padding(20)
+        .proSectionCard(tint: .yellow)
     }
 
     private func formatShutterSpeed(_ duration: Float) -> String {
@@ -256,10 +265,10 @@ struct ModernFocusControls: View {
             } label: {
                 HStack {
                     Image(systemName: "scope")
-                        .foregroundColor(.green)
+                        .foregroundColor(.green.opacity(0.9))
                     Text("Focus")
                         .font(.system(size: 20, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundColor(.white.opacity(0.95))
                     Spacer()
                     Image(systemName: "chevron.down")
                         .font(.system(size: 14, weight: .semibold))
@@ -267,6 +276,12 @@ struct ModernFocusControls: View {
                         .rotationEffect(.degrees(isExpanded ? 0 : -90))
                 }
                 .frame(minHeight: 44)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .liquidGlass(intensity: .regular, tint: .green.opacity(0.2), interactive: true)
+                )
             }
             .buttonStyle(.plain)
 
@@ -286,15 +301,21 @@ struct ModernFocusControls: View {
                     // Focus Peaking Toggle
                     HStack {
                         Image(systemName: "eye")
-                            .foregroundColor(.green)
+                            .foregroundColor(.green.opacity(0.9))
                         Text("Focus Peaking")
                             .font(.system(size: 16, design: .rounded))
-                            .foregroundColor(.white)
+                            .foregroundColor(.white.opacity(0.9))
                         Spacer()
                         Toggle("", isOn: $focusPeakingEnabled)
                             .labelsHidden()
                             .tint(.green)
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 14)
+                            .liquidGlass(intensity: .subtle, tint: .green.opacity(0.15), interactive: true)
+                    )
 
                     // Focus Peaking Controls
                     if focusPeakingEnabled {
@@ -315,16 +336,15 @@ struct ModernFocusControls: View {
                                     } label: {
                                         ZStack {
                                             Circle()
-                                                .fill(color.opacity(0.3))
+                                                .liquidGlass(
+                                                    intensity: .regular,
+                                                    tint: color.opacity(focusPeakingColor == color ? 0.45 : 0.25),
+                                                    interactive: true
+                                                )
                                                 .frame(width: 32, height: 32)
                                                 .overlay(
                                                     Circle()
                                                         .stroke(color, lineWidth: focusPeakingColor == color ? 3 : 1)
-                                                )
-                                                .liquidGlass(
-                                                    intensity: .subtle,
-                                                    tint: focusPeakingColor == color ? color.opacity(0.5) : nil,
-                                                    interactive: true
                                                 )
 
                                             if focusPeakingColor == color {
@@ -353,11 +373,8 @@ struct ModernFocusControls: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .liquidGlass(intensity: .regular, tint: .green.opacity(0.1), interactive: false)
-        )
+        .padding(20)
+        .proSectionCard(tint: .green)
     }
 }
 
@@ -382,10 +399,10 @@ struct ModernBracketingControls: View {
             } label: {
                 HStack {
                     Image(systemName: "rectangle.stack")
-                        .foregroundColor(.orange)
+                        .foregroundColor(.orange.opacity(0.9))
                     Text("Bracketing")
                         .font(.system(size: 20, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white)
+                        .foregroundColor(.white.opacity(0.95))
                     Spacer()
                     Image(systemName: "chevron.down")
                         .font(.system(size: 14, weight: .semibold))
@@ -393,6 +410,12 @@ struct ModernBracketingControls: View {
                         .rotationEffect(.degrees(isExpanded ? 0 : -90))
                 }
                 .frame(minHeight: 44)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .liquidGlass(intensity: .regular, tint: .orange.opacity(0.2), interactive: true)
+                )
             }
             .buttonStyle(.plain)
 
@@ -439,6 +462,12 @@ struct ModernBracketingControls: View {
                                 .disabled(evCompensationLocked)
                         }
                     }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .liquidGlass(intensity: .subtle, tint: .orange.opacity(0.15), interactive: true)
+                    )
 
                     // Bracketing sequence visualization
                     ModernBracketingSequence(evStep: selectedEVStep, shotCount: bracketShotCount)
@@ -498,11 +527,8 @@ struct ModernBracketingControls: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .liquidGlass(intensity: .regular, tint: .orange.opacity(0.1), interactive: false)
-        )
+        .padding(20)
+        .proSectionCard(tint: .orange)
     }
 
     private func formatEV(_ value: Float) -> String {
@@ -604,5 +630,30 @@ struct ModernBracketingSequence: View {
         } else {
             return "\(Int(value))"
         }
+    }
+}
+
+// MARK: - Pro Section Card Helper
+
+private extension View {
+    func proSectionCard(tint: Color) -> some View {
+        self.background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            tint.opacity(0.35),
+                            tint.opacity(0.12)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+                .shadow(color: tint.opacity(0.25), radius: 24, x: 0, y: 12)
+        )
     }
 }

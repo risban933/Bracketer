@@ -54,7 +54,7 @@ struct ContextualBottomControls: View {
 
             // Main control row (always visible)
             HStack(spacing: 44) {
-                ModernPhotoLibraryButton()
+                ModernPhotoLibraryButton(camera: camera)
 
                 EnhancedShutterButton(
                     isCapturing: camera.isCapturing,
@@ -278,7 +278,7 @@ struct ContextualBottomControlsLegacy: View {
 
             // Main control row
             HStack(spacing: 44) {
-                ModernPhotoLibraryButton()
+                ModernPhotoLibraryButton(camera: camera)
 
                 ModernShutterButton(
                     isCapturing: camera.isCapturing,

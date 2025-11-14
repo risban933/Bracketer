@@ -66,17 +66,15 @@ class OrientationManager: ObservableObject {
 // MARK: - View Extension for Rotating Controls
 
 extension View {
-    /// Rotates the view to match device orientation (for buttons and controls)
-    /// Use this on UI elements that should rotate while the app stays portrait
-    func rotateWithDevice(_ orientationManager: OrientationManager) -> some View {
-        self.rotationEffect(orientationManager.rotationAngle)
+    /// Rotates the view based on the current device orientation around a customizable anchor point.
+    func rotateWithDevice(_ orientationManager: OrientationManager, anchor: UnitPoint = .center) -> some View {
+        self.rotationEffect(orientationManager.rotationAngle, anchor: anchor)
+            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: orientationManager.rotationAngle)
     }
 
-    /// Rotates the view to always face upward regardless of device orientation
-    /// Perfect for buttons, labels, and icons in camera apps
-    func alwaysUpright(_ orientationManager: OrientationManager) -> some View {
-        self.rotationEffect(orientationManager.rotationAngle)
-            .animation(.spring(response: 0.3, dampingFraction: 0.8), value: orientationManager.rotationAngle)
+    /// Convenience for always keeping content upright (alias for rotateWithDevice).
+    func alwaysUpright(_ orientationManager: OrientationManager, anchor: UnitPoint = .center) -> some View {
+        rotateWithDevice(orientationManager, anchor: anchor)
     }
 }
 

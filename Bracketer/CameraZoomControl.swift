@@ -94,6 +94,16 @@ enum CameraZoomLevel: Float, CaseIterable, Hashable {
         }
     }
 
+    var cameraKind: CameraKind {
+        switch self {
+        case .ultraWide: return .ultraWide
+        case .wide: return .wide
+        case .telephoto2x: return .twoX
+        case .telephoto4x: return .telephoto
+        case .telephoto8x: return .eightX
+        }
+    }
+
     static var iPhone17ProMaxLevels: [CameraZoomLevel] {
         return [.ultraWide, .wide, .telephoto2x, .telephoto4x, .telephoto8x]
     }
@@ -133,7 +143,7 @@ enum FlashMode: CaseIterable {
 
     var tintColor: Color? {
         switch self {
-        case .auto: return .yellow.opacity(0.3)
+        case .auto: return nil
         case .on: return .yellow.opacity(0.5)
         case .off: return nil
         }

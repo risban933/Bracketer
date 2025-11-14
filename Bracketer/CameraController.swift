@@ -60,6 +60,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
     @Published var currentShutterSpeedText: String = "1/60"
     @Published var lastBracketAssets: [PHAsset] = []
     @Published var showImageViewer = false
+    @Published var currentLensSupportsRaw: Bool = false
 
     @Published var teleUses12MP: Bool = false
 
@@ -230,6 +231,27 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         }
     }
 
+    func presentMostRecentAsset() {
+        sessionQueue.async {
+            if !self.lastBracketAssets.isEmpty {
+                self.main { self.showImageViewer = true }
+                return
+            }
+            let fetchOptions = PHFetchOptions()
+            fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+            fetchOptions.fetchLimit = 1
+            let result = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+            guard let asset = result.firstObject else {
+                Logger.photo("No recent assets available to present")
+                return
+            }
+            self.main {
+                self.lastBracketAssets = [asset]
+                self.showImageViewer = true
+            }
+        }
+    }
+
     func switchCamera(to kind: CameraKind) {
         guard selectedCamera != kind else { return }
         // Provide haptic feedback for lens switching
@@ -264,6 +286,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             self.postError("Camera not available.")
             return
         }
+        Logger.camera("Selected lens \(kind.label) (\(dev.localizedName)) with \(dev.formats.count) formats")
         self.device = dev
         do {
             let inp = try AVCaptureDeviceInput(device: dev)
@@ -311,20 +334,30 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                 // If we reached here, we found a suitable format
                 break
             }
+            let supportsRaw = !self.photoOutput.availableRawPhotoPixelFormatTypes.isEmpty
+            Logger.camera("Lens \(self.selectedCamera.label) active format: \(String(describing: dev.activeFormat)) RAW supported: \(supportsRaw)")
+            main { self.currentLensSupportsRaw = supportsRaw }
         } catch {
             self.postError("Format selection failed: \(error.localizedDescription)")
         }
     }
 
     private func configureProRAW() {
-        if self.photoOutput.isAppleProRAWSupported {
+        let supportsRaw = self.photoOutput.isAppleProRAWSupported && !self.photoOutput.availableRawPhotoPixelFormatTypes.isEmpty
+        if supportsRaw {
             self.photoOutput.isAppleProRAWEnabled = true
-            self.main { self.isProRAWEnabled = true }
+            self.main {
+                self.isProRAWEnabled = true
+                self.currentLensSupportsRaw = true
+            }
         } else {
             self.photoOutput.isAppleProRAWEnabled = false
-            self.main { self.isProRAWEnabled = false }
+            self.main {
+                self.isProRAWEnabled = false
+                self.currentLensSupportsRaw = false
+            }
         }
-        Logger.photo("ProRAW supported: \(self.photoOutput.isAppleProRAWSupported), enabled: \(self.photoOutput.isAppleProRAWEnabled)")
+        Logger.photo("ProRAW supported: \(self.photoOutput.isAppleProRAWSupported), available RAW types: \(self.photoOutput.availableRawPhotoPixelFormatTypes.count), enabled: \(self.photoOutput.isAppleProRAWEnabled)")
     }
 
     private func handleOrientationChange() {
@@ -386,7 +419,11 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
 
     func toggleProRAW() {
         sessionQueue.async {
-            guard self.photoOutput.isAppleProRAWSupported else { return }
+            guard self.photoOutput.isAppleProRAWSupported,
+                  !self.photoOutput.availableRawPhotoPixelFormatTypes.isEmpty else {
+                Logger.camera("Attempted to toggle ProRAW on unsupported lens")
+                return
+            }
             self.photoOutput.isAppleProRAWEnabled.toggle()
             self.main { self.isProRAWEnabled = self.photoOutput.isAppleProRAWEnabled }
             Logger.photo("ProRAW supported: \(self.photoOutput.isAppleProRAWSupported), enabled: \(self.photoOutput.isAppleProRAWEnabled)")
@@ -405,11 +442,6 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             self.sequenceEVStep = evStep
             self.sequenceTimestamp = Int(Date().timeIntervalSince1970)
             self.rawPixelFormat = self.chooseRawPixelFormat()
-            guard let rawFmt = self.rawPixelFormat else {
-                self.sequenceInFlight = false
-                self.postError("No RAW format available.")
-                return
-            }
 
             // Build bracket plan based on parameters
             let evOffsets = self.buildBracketEVOffsets(evStep: evStep, shotCount: shotCount)
@@ -446,8 +478,12 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                     HapticManager.shared.captureStarted()
                 }
 
-                // Capture using Apple's bracketing API
-                self.captureBracketSequenceWithAPI(evOffsets: evOffsets, rawFormat: rawFmt)
+                if let rawFmt = self.rawPixelFormat {
+                    self.captureBracketSequenceWithAPI(evOffsets: evOffsets, rawFormat: rawFmt)
+                } else {
+                    Logger.camera("RAW unavailable for \(self.selectedCamera.label); falling back to processed HEIF bracket.")
+                    self.captureBracketSequenceProcessed(evOffsets: evOffsets)
+                }
             }
         }
     }
@@ -479,6 +515,24 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         Logger.camera("Capturing bracket with \(bracketSettings.count) exposures using AVCapturePhotoBracketSettings")
 
         // Capture the entire bracket atomically
+        self.photoOutput.capturePhoto(with: photoSettings, delegate: self)
+    }
+
+    private func captureBracketSequenceProcessed(evOffsets: [Float]) {
+        let bracketSettings: [AVCaptureBracketedStillImageSettings] = evOffsets.map {
+            AVCaptureAutoExposureBracketedStillImageSettings.autoExposureSettings(exposureTargetBias: $0)
+        }
+
+        let photoSettings = AVCapturePhotoBracketSettings(bracketedSettings: bracketSettings)
+        let preferredCodec = self.photoOutput.availablePhotoCodecTypes.contains(.hevc) ? AVVideoCodecType.hevc : .jpeg
+        photoSettings.processedFormat = [AVVideoCodecKey: preferredCodec]
+        if let dims = self.maxPhotoDims {
+            photoSettings.maxPhotoDimensions = dims
+        }
+        photoSettings.flashMode = .off
+        photoSettings.photoQualityPrioritization = .quality
+        self.sequenceStep = 0
+        Logger.camera("Capturing processed bracket (\(preferredCodec.rawValue)) with \(bracketSettings.count) exposures")
         self.photoOutput.capturePhoto(with: photoSettings, delegate: self)
     }
 
