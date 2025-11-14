@@ -507,7 +507,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             photoSettings.maxPhotoDimensions = dims
         }
         photoSettings.flashMode = AVCaptureDevice.FlashMode.off
-        photoSettings.photoQualityPrioritization = .quality
+        photoSettings.photoQualityPrioritization = AVCapturePhotoOutput.QualityPrioritization.quality
 
         // Store expected shot count for progress tracking
         self.sequenceStep = 0
@@ -523,13 +523,16 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             AVCaptureAutoExposureBracketedStillImageSettings.autoExposureSettings(exposureTargetBias: $0)
         }
 
-        let photoSettings = AVCapturePhotoBracketSettings(bracketedSettings: bracketSettings)
         let preferredCodec = self.photoOutput.availablePhotoCodecTypes.contains(.hevc) ? AVVideoCodecType.hevc : .jpeg
-        photoSettings.processedFormat = [AVVideoCodecKey: preferredCodec]
+        let photoSettings = AVCapturePhotoBracketSettings(
+            rawPixelFormatType: 0,
+            processedFormat: [AVVideoCodecKey: preferredCodec],
+            bracketedSettings: bracketSettings
+        )
         if let dims = self.maxPhotoDims {
             photoSettings.maxPhotoDimensions = dims
         }
-        photoSettings.flashMode = .off
+        photoSettings.flashMode = AVCaptureDevice.FlashMode.off
         photoSettings.photoQualityPrioritization = .quality
         self.sequenceStep = 0
         Logger.camera("Capturing processed bracket (\(preferredCodec.rawValue)) with \(bracketSettings.count) exposures")
