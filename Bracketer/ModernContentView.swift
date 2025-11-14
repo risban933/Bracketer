@@ -8,6 +8,7 @@ import Photos
 struct ModernContentView: View {
     @StateObject private var camera = CameraController()
     @StateObject private var motionManager = MotionLevelManager()
+    @StateObject private var orientationManager = OrientationManager()
 
     // UI State
     @State private var showProControls = false
@@ -43,7 +44,7 @@ struct ModernContentView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let isLandscape = geometry.size.width > geometry.size.height
+            let isLandscape = orientationManager.isLandscape
             ZStack {
                 if isLandscape {
                     // In landscape, avoid overlaying controls on top of the preview:
@@ -212,6 +213,30 @@ struct ModernContentView: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                     .zIndex(100)
                 }
+
+                // Orientation lock indicator
+                if orientationManager.isOrientationLocked {
+                    VStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: "lock.rotation.fill")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("Orientation Locked")
+                                .font(.system(size: 13, weight: .medium))
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule()
+                                .fill(Color.orange.opacity(0.9))
+                        )
+                        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                        .padding(.top, 120)
+                        Spacer()
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(99)
+                }
             }
         }
         .ignoresSafeArea()
@@ -241,6 +266,8 @@ struct ModernContentView: View {
             camera.switchCamera(to: newValue.cameraKind)
         }
         .task {
+            // Connect orientation manager to camera
+            camera.orientationManager = orientationManager
             await camera.start()
             // Align the zoom UI with the active logical camera
             selectedZoom = CameraZoomLevel.forCameraKind(camera.selectedCamera)
@@ -249,6 +276,7 @@ struct ModernContentView: View {
             motionManager.start()
             motionManager.isLevelingActive = showLevel
         }
+        .environmentObject(orientationManager)
         .onDisappear {
             toastHideTask?.cancel()
             toastHideTask = nil
@@ -311,10 +339,9 @@ struct ModernCameraPreview: View {
                 onLayerReady: { _ in
                     // Preview ready callback
                 },
-                orientation: camera.currentUIOrientation,
                 gridType: gridType,
                 showGrid: showGrid,
-                levelAngle: showLevel ? motionManager.levelAngleDegrees(for: camera.currentUIOrientation) : 0,
+                levelAngle: showLevel ? motionManager.levelAngleDegrees(for: orientationManager.currentOrientation) : 0,
                 showHistogram: false,
                 focusPeakingEnabled: focusPeakingEnabled,
                 focusPeakingColor: focusPeakingColor,

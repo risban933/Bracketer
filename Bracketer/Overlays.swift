@@ -64,55 +64,5 @@ struct LevelerOverlay: View {
     }
 }
 
-final class MotionManager: ObservableObject {
-    private let manager = CMMotionManager()
-    private let motionQueue = OperationQueue()
-    @Published private(set) var angleDegrees: Double = 0
-    @Published private(set) var isMotionAvailable: Bool = false
-
-    init() {
-        motionQueue.qualityOfService = .userInteractive
-        motionQueue.maxConcurrentOperationCount = 1
-    }
-
-    func start() {
-        guard manager.isDeviceMotionAvailable else {
-            isMotionAvailable = false
-            return
-        }
-        
-        isMotionAvailable = true
-        manager.deviceMotionUpdateInterval = Constants.motionUpdateInterval
-        
-        manager.startDeviceMotionUpdates(to: motionQueue) { [weak self] motion, _ in
-            guard let self = self, let m = motion else { return }
-            
-            let g = m.gravity
-            let angle = atan2(g.x, -g.y)
-            let degrees = angle * 180.0 / .pi
-            
-            DispatchQueue.main.async {
-                self.angleDegrees = degrees
-            }
-        }
-    }
-    
-    func stop() {
-        manager.stopDeviceMotionUpdates()
-    }
-
-    func levelAngleDegrees(for io: UIInterfaceOrientation) -> Double {
-        switch io {
-        case .portrait:
-            return angleDegrees
-        case .portraitUpsideDown:
-            return angleDegrees + 180
-        case .landscapeLeft:
-            return angleDegrees + 90
-        case .landscapeRight:
-            return angleDegrees - 90
-        default:
-            return angleDegrees
-        }
-    }
-}
+// Note: MotionManager functionality is provided by MotionLevelManager in MotionManager.swift
+// This ensures a single, consistent implementation for motion tracking across the app
