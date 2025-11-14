@@ -58,70 +58,55 @@ struct PreviewContainer: View {
 
     var body: some View {
         GeometryReader { geo in
-            let isPortrait = orientation.isPortrait
-            let previewAspect: CGFloat = isPortrait ? 3.0 / 4.0 : 4.0 / 3.0
+            let previewAspect: CGFloat = orientation.isPortrait ? 3.0 / 4.0 : 4.0 / 3.0
 
             ZStack {
                 // Background to fill the screen behind the 4:3 preview
                 Color.black.ignoresSafeArea()
 
-                // Camera preview with overlays, constrained to leave space for controls in landscape
-                VStack(spacing: 0) {
-                    ZStack {
-                        CameraPreviewLayerView(session: session, onLayerReady: onLayerReady)
-                            .clipped()
+                // Centered camera preview with overlays, constrained to the preview bounds
+                ZStack {
+                    CameraPreviewLayerView(session: session, onLayerReady: onLayerReady)
+                        .clipped()
 
-                        if showGrid {
-                            ZStack {
-                                switch gridType {
-                                case .ruleOfThirds:
-                                    RuleOfThirdsGrid()
-                                        .stroke(Color.white.opacity(Constants.gridOpacity), lineWidth: Constants.gridLineWidth)
-                                case .goldenRatio:
-                                    GoldenRatioGrid()
-                                        .stroke(Color.white.opacity(Constants.gridOpacity), lineWidth: Constants.gridLineWidth)
-                                case .goldenSpiral:
-                                    GoldenSpiralGrid()
-                                        .stroke(Color.white.opacity(Constants.gridOpacity), lineWidth: Constants.gridLineWidth)
-                                case .centerCrosshair:
-                                    CenterCrosshairGrid()
-                                        .stroke(Color.white.opacity(Constants.gridOpacity), lineWidth: Constants.gridLineWidth)
-                                }
+                    if showGrid {
+                        ZStack {
+                            switch gridType {
+                            case .ruleOfThirds:
+                                RuleOfThirdsGrid()
+                                    .stroke(Color.white.opacity(Constants.gridOpacity), lineWidth: Constants.gridLineWidth)
+                            case .goldenRatio:
+                                GoldenRatioGrid()
+                                    .stroke(Color.white.opacity(Constants.gridOpacity), lineWidth: Constants.gridLineWidth)
+                            case .goldenSpiral:
+                                GoldenSpiralGrid()
+                                    .stroke(Color.white.opacity(Constants.gridOpacity), lineWidth: Constants.gridLineWidth)
+                            case .centerCrosshair:
+                                CenterCrosshairGrid()
+                                    .stroke(Color.white.opacity(Constants.gridOpacity), lineWidth: Constants.gridLineWidth)
                             }
-                            .allowsHitTesting(false)
                         }
-
-                        if levelAngle != 0 {
-                            MotionLevelOverlay(angleDegrees: levelAngle)
-                                .allowsHitTesting(false)
-                        }
-
-                        if showHistogram {
-                            HistogramOverlay()
-                                .allowsHitTesting(false)
-                        }
-
-                        if focusPeakingEnabled {
-                            FocusPeakingOverlay(color: focusPeakingColor, intensity: focusPeakingIntensity)
-                                .allowsHitTesting(false)
-                        }
+                        .allowsHitTesting(false)
                     }
-                    .aspectRatio(previewAspect, contentMode: .fit)
-                    .frame(
-                        maxWidth: geo.size.width,
-                        // In landscape, reserve some vertical space at the bottom
-                        maxHeight: isPortrait ? geo.size.height : geo.size.height * 0.8
-                    )
-                    .clipped()
 
-                    // In landscape we intentionally leave some black space at the bottom
-                    // so that camera controls do not cover the live preview.
-                    if isPortrait {
-                        Spacer(minLength: 0)
-                    } else {
-                        Spacer(minLength: geo.size.height * 0.2)
+                    if levelAngle != 0 {
+                        MotionLevelOverlay(angleDegrees: levelAngle)
+                            .allowsHitTesting(false)
+                    }
+
+                    if showHistogram {
+                        HistogramOverlay()
+                            .allowsHitTesting(false)
+                    }
+
+                    if focusPeakingEnabled {
+                        FocusPeakingOverlay(color: focusPeakingColor, intensity: focusPeakingIntensity)
+                            .allowsHitTesting(false)
                     }
                 }
+                .aspectRatio(previewAspect, contentMode: .fit)
+                .frame(maxWidth: geo.size.width, maxHeight: geo.size.height)
+                .clipped()
             }
         }
     }
