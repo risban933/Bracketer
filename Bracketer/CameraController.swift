@@ -52,6 +52,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
     @Published var lastError: CamError?
     @Published var isProRAWEnabled: Bool = false
     @Published var selectedCamera: CameraKind = .wide
+    @Published var availableCameraKinds: [CameraKind] = [.wide]
     @Published var currentUIOrientation: UIInterfaceOrientation = .portrait
     @Published var isInitializing: Bool = false
     @Published var isCapturing: Bool = false
@@ -190,6 +191,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
                 }
 
                 self.setInput(kind: initialKind)
+                self.discoverAvailableCameraKinds()
                 self.selectBestPhotoFormat()
                 self.configureProRAW()
                 self.configureMaxPhotoDimensions()
@@ -202,7 +204,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             // Removed rotation to previewLayer.connection
             // self.applyRotation(to: self.previewLayer?.connection)
             self.applyRotation(to: self.photoOutput.connection(with: .video))
-            self.applyZoomForSelectedCamera()
+            self.applyZoomForSelectedCamera(kind: initialKind)
         }
     }
 
@@ -257,6 +259,7 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         // Provide haptic feedback for lens switching
         main { HapticManager.shared.lensSwitched() }
         sessionQueue.async {
+            // Keep track of which logical camera we are switching to
             self.session.beginConfiguration()
             if let existing = self.input {
                 self.session.removeInput(existing)
@@ -271,8 +274,32 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
             // Removed rotation to previewLayer.connection
             // self.applyRotation(to: self.previewLayer?.connection)
             self.applyRotation(to: self.photoOutput.connection(with: .video))
-            self.applyZoomForSelectedCamera()
+            self.applyZoomForSelectedCamera(kind: kind)
             self.main { self.selectedCamera = kind }
+        }
+    }
+
+    private func discoverAvailableCameraKinds() {
+        let allKinds: [CameraKind] = [.ultraWide, .wide, .twoX, .telephoto, .eightX]
+        var discovered: [CameraKind] = []
+
+        for kind in allKinds {
+            let discovery = AVCaptureDevice.DiscoverySession(
+                deviceTypes: [kind.deviceType],
+                mediaType: .video,
+                position: .back
+            )
+            if !discovery.devices.isEmpty {
+                discovered.append(kind)
+            }
+        }
+
+        if discovered.isEmpty {
+            discovered = [.wide]
+        }
+
+        main {
+            self.availableCameraKinds = discovered
         }
     }
 
@@ -396,11 +423,14 @@ final class CameraController: NSObject, ObservableObject, @unchecked Sendable {
         }
     }
 
-    private func applyZoomForSelectedCamera() {
+    private func applyZoomForSelectedCamera(kind: CameraKind? = nil) {
         guard let dev = self.device else { return }
+
+        let logicalCamera = kind ?? self.selectedCamera
+
         do {
             try dev.lockForConfiguration()
-            switch self.selectedCamera {
+            switch logicalCamera {
             case .twoX:
                 dev.videoZoomFactor = min(max(2.0, dev.minAvailableVideoZoomFactor), dev.maxAvailableVideoZoomFactor)
             case .eightX:

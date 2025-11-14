@@ -70,7 +70,7 @@ struct ContextualBottomControls: View {
             // Zoom selector at very bottom
             CameraZoomControl(
                 selectedZoom: $selectedZoom,
-                availableZoomLevels: CameraZoomLevel.iPhone17ProMaxLevels
+                availableZoomLevels: CameraZoomLevel.levels(for: camera.availableCameraKinds)
             )
             .padding(.bottom, 40)
         }

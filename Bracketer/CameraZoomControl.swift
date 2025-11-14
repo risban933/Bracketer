@@ -115,6 +115,40 @@ enum CameraZoomLevel: Float, CaseIterable, Hashable {
     static var standardLevels: [CameraZoomLevel] {
         return [.ultraWide, .wide, .telephoto2x]
     }
+
+    static func levels(for kinds: [CameraKind]) -> [CameraZoomLevel] {
+        var levels: [CameraZoomLevel] = []
+
+        for kind in kinds {
+            switch kind {
+            case .ultraWide:
+                if !levels.contains(.ultraWide) { levels.append(.ultraWide) }
+            case .wide:
+                if !levels.contains(.wide) { levels.append(.wide) }
+            case .twoX:
+                if !levels.contains(.telephoto2x) { levels.append(.telephoto2x) }
+            case .telephoto:
+                if !levels.contains(.telephoto4x) { levels.append(.telephoto4x) }
+            case .eightX:
+                if !levels.contains(.telephoto8x) { levels.append(.telephoto8x) }
+            }
+        }
+
+        if levels.isEmpty {
+            levels = [.wide]
+        }
+        return levels
+    }
+
+    static func forCameraKind(_ kind: CameraKind) -> CameraZoomLevel {
+        switch kind {
+        case .ultraWide: return .ultraWide
+        case .wide: return .wide
+        case .twoX: return .telephoto2x
+        case .telephoto: return .telephoto4x
+        case .eightX: return .telephoto8x
+        }
+    }
 }
 
 // MARK: - Flash Mode Control

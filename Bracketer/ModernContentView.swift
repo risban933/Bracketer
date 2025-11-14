@@ -242,6 +242,8 @@ struct ModernContentView: View {
         }
         .task {
             await camera.start()
+            // Align the zoom UI with the active logical camera
+            selectedZoom = CameraZoomLevel.forCameraKind(camera.selectedCamera)
         }
         .onAppear {
             motionManager.start()
