@@ -45,39 +45,76 @@ struct ModernContentView: View {
         GeometryReader { geometry in
             let isLandscape = geometry.size.width > geometry.size.height
             ZStack {
-                // Camera preview with overlays
-                ModernCameraPreview(
-                    camera: camera,
-                    motionManager: motionManager,
-                    showGrid: showGrid,
-                    gridType: gridType,
-                    showLevel: showLevel,
-                    focusPeakingEnabled: focusPeakingEnabled,
-                    focusPeakingColor: focusPeakingColor,
-                    focusPeakingIntensity: focusPeakingIntensity
-                )
-                
-                // Top status bar (Apple Camera style)
-                Group {
-                    if isLandscape {
-                        VStack {
-                            ModernTopBarEnhanced(
-                                camera: camera,
-                                currentShootingMode: $currentShootingMode,
-                                selectedEVStep: selectedEVStep,
-                                showProControls: $showProControls,
-                                flashMode: $flashMode,
-                                timerMode: $timerMode,
-                                isGridActive: showGrid,
-                                isLevelActive: showLevel,
-                                onGridToggle: toggleGrid,
-                                onLevelToggle: toggleLevel
-                            )
-                            .padding(.top, 16)
-                            .padding(.horizontal, 16)
-                            Spacer()
-                        }
-                    } else {
+                if isLandscape {
+                    // In landscape, avoid overlaying controls on top of the preview:
+                    // use a vertical stack with top bar, preview, then bottom controls.
+                    VStack(spacing: 0) {
+                        ModernTopBarEnhanced(
+                            camera: camera,
+                            currentShootingMode: $currentShootingMode,
+                            selectedEVStep: selectedEVStep,
+                            showProControls: $showProControls,
+                            flashMode: $flashMode,
+                            timerMode: $timerMode,
+                            isGridActive: showGrid,
+                            isLevelActive: showLevel,
+                            onGridToggle: toggleGrid,
+                            onLevelToggle: toggleLevel
+                        )
+                        .padding(.top, 16)
+                        .padding(.horizontal, 16)
+
+                        ModernCameraPreview(
+                            camera: camera,
+                            motionManager: motionManager,
+                            showGrid: showGrid,
+                            gridType: gridType,
+                            showLevel: showLevel,
+                            focusPeakingEnabled: focusPeakingEnabled,
+                            focusPeakingColor: focusPeakingColor,
+                            focusPeakingIntensity: focusPeakingIntensity
+                        )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                        ContextualBottomControls(
+                            camera: camera,
+                            showProControls: $showProControls,
+                            showSettings: $showSettings,
+                            selectedEVStep: $selectedEVStep,
+                            currentEVCompensation: $currentEVCompensation,
+                            evCompensationLocked: $evCompensationLocked,
+                            focusPeakingEnabled: $focusPeakingEnabled,
+                            focusPeakingColor: $focusPeakingColor,
+                            focusPeakingIntensity: $focusPeakingIntensity,
+                            bracketShotCount: $bracketShotCount,
+                            selectedZoom: $selectedZoom,
+                            flashMode: $flashMode,
+                            timerMode: $timerMode,
+                            isGridActive: $showGrid,
+                            isLevelActive: $showLevel,
+                            currentShootingMode: $currentShootingMode,
+                            onGridToggle: toggleGrid,
+                            onLevelToggle: toggleLevel
+                        )
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+                    }
+                } else {
+                    // Portrait: keep the classic overlay layout (top bar and bottom controls
+                    // floating over the preview) for an Apple Camera style look.
+                    ZStack {
+                        ModernCameraPreview(
+                            camera: camera,
+                            motionManager: motionManager,
+                            showGrid: showGrid,
+                            gridType: gridType,
+                            showLevel: showLevel,
+                            focusPeakingEnabled: focusPeakingEnabled,
+                            focusPeakingColor: focusPeakingColor,
+                            focusPeakingIntensity: focusPeakingIntensity
+                        )
+
+                        // Top bar
                         VStack {
                             ModernTopBarEnhanced(
                                 camera: camera,
@@ -94,38 +131,8 @@ struct ModernContentView: View {
                             .padding(.top, 60)
                             Spacer()
                         }
-                    }
-                }
 
-                // Bottom controls (Apple Camera style) - buttons rotate with device
-                Group {
-                    if isLandscape {
-                        VStack {
-                            Spacer()
-                            ContextualBottomControls(
-                                camera: camera,
-                                showProControls: $showProControls,
-                                showSettings: $showSettings,
-                                selectedEVStep: $selectedEVStep,
-                                currentEVCompensation: $currentEVCompensation,
-                                evCompensationLocked: $evCompensationLocked,
-                                focusPeakingEnabled: $focusPeakingEnabled,
-                                focusPeakingColor: $focusPeakingColor,
-                                focusPeakingIntensity: $focusPeakingIntensity,
-                                bracketShotCount: $bracketShotCount,
-                                selectedZoom: $selectedZoom,
-                                flashMode: $flashMode,
-                                timerMode: $timerMode,
-                                isGridActive: $showGrid,
-                                isLevelActive: $showLevel,
-                                currentShootingMode: $currentShootingMode,
-                                onGridToggle: toggleGrid,
-                                onLevelToggle: toggleLevel
-                            )
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 20)
-                        }
-                    } else {
+                        // Bottom controls
                         VStack {
                             Spacer()
                             ContextualBottomControls(
